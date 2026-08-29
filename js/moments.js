@@ -1,10 +1,11 @@
-// moments.js - 朋友圈功能（完整版 + 头像与昵称管理）- iOS兼容修复版
+// moments.js - 朋友圈功能（完整版 + 头像与昵称管理 + 智能互动）- iOS兼容修复版
 (function() {
     'use strict';
 
     var STORAGE_KEY = 'moments_data';
     var COVER_KEY = 'moments_cover_image';
     var MAX_POSTS = 100;
+    var INTERACTION_QUEUE = [];
 
     // =============================================
     // 工具函数
@@ -36,6 +37,30 @@
             if (c && c.trim()) {
                 if (result.indexOf(c) === -1) result.push(c);
             }
+        }
+        return result;
+    }
+
+    // 从回复库中随机拼凑3-5条内容
+    function _generateRandomCombinedText() {
+        var cards = _getReplyCards();
+        if (cards.length < 2) {
+            cards = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在'];
+        }
+        var shuffled = cards.slice();
+        for (var i = shuffled.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = shuffled[i];
+            shuffled[i] = shuffled[j];
+            shuffled[j] = temp;
+        }
+        var count = 3 + Math.floor(Math.random() * 3); // 3-5条
+        var picked = shuffled.slice(0, Math.min(count, shuffled.length));
+        var puncts = ['，', '。', '？', '！', '...', '～', '、', '；'];
+        var result = '';
+        for (var pi = 0; pi < picked.length; pi++) {
+            var p = puncts[Math.floor(Math.random() * puncts.length)];
+            result += picked[pi] + p;
         }
         return result;
     }
@@ -81,33 +106,11 @@
         localStorage.setItem('moments_group_members', JSON.stringify(members));
     }
 
-    function _getRandomGroupMember() {
+    function _getRandomGroupMember(excludeName) {
         var members = _getGroupMembers();
-        if (members.length === 0) return { name: '未命名', avatar: '' };
-        return members[Math.floor(Math.random() * members.length)];
-    }
-
-    function _generatePartnerPostText() {
-        var cards = _getReplyCards();
-        if (cards.length < 2) {
-            cards = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在'];
-        }
-        var shuffled = cards.slice();
-        for (var i = shuffled.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var temp = shuffled[i];
-            shuffled[i] = shuffled[j];
-            shuffled[j] = temp;
-        }
-        var count = 2 + Math.floor(Math.random() * 3);
-        var picked = shuffled.slice(0, Math.min(count, shuffled.length));
-        var puncts = ['，', '。', '？', '！', '...', '、', '；'];
-        var result = '';
-        for (var pi = 0; pi < picked.length; pi++) {
-            var p = puncts[Math.floor(Math.random() * puncts.length)];
-            result += picked[pi] + p;
-        }
-        return result;
+        var filtered = members.filter(function(m) { return m.name !== excludeName; });
+        if (filtered.length === 0) return { name: '未命名', avatar: '' };
+        return filtered[Math.floor(Math.random() * filtered.length)];
     }
 
     function _getPartnerName() {
@@ -258,9 +261,12 @@
             timestamp: timestamp || new Date().toISOString(),
             likes: 0,
             likedByMe: false,
+            likedByMembers: {},
             comments: [],
             memberName: memberName || '',
-            memberAvatar: memberAvatar || ''
+            memberAvatar: memberAvatar || '',
+            _partnerRepliedLike: false,
+            _partnerRepliedComment: {}
         };
         data.posts.unshift(post);
         if (data.posts.length > MAX_POSTS) data.posts = data.posts.slice(0, MAX_POSTS);
@@ -284,85 +290,118 @@
         } else {
             post.likes += 1;
             post.likedByMe = true;
-            if (post.author === 'partner') {
-                var delay = 3000 + Math.random() * 120000;
-                setTimeout(function() {
-                    var freshPosts = _getPosts();
-                    var freshPost = freshPosts.find(function(p) { return p.id === postId; });
-                    if (freshPost && freshPost.likedByMe) {
-                        if (!freshPost._partnerRepliedLike) {
-                            freshPost.likes += 1;
-                            freshPost._partnerRepliedLike = true;
-                            _setData(_getData());
-                            var container = document.getElementById('moments-content');
-                            var activeTab = document.querySelector('.moments-tab.active');
-                            if (container && activeTab) renderTab(activeTab.dataset.tab, container);
-                        }
-                    }
-                }, delay);
-            }
+            // 触发群成员点赞（1-3分钟）
+            _schedulePartnerInteraction(postId, 'like');
         }
         _setData(data);
     }
 
-    function _addComment(postId, author, text) {
-        var data = _getData();
-        var post = data.posts.find(function(p) { return p.id === postId; });
-        if (!post) return null;
-        var comment = {
-            id: _generateId(),
-            author: author,
-            text: text.trim(),
-            timestamp: new Date().toISOString(),
-            reply: null,
-            replied: false
+    // =============================================
+    // 智能互动调度器
+    // =============================================
+    function _schedulePartnerInteraction(postId, type, commentId) {
+        var delay = 0;
+        if (type === 'like') {
+            delay = 60000 + Math.random() * 120000; // 1-3分钟
+        } else if (type === 'comment') {
+            delay = 180000 + Math.random() * 120000; // 3-5分钟
+        } else if (type === 'reply') {
+            delay = 120000 + Math.random() * 120000; // 2-4分钟
+        }
+        var task = {
+            postId: postId,
+            type: type,
+            commentId: commentId || null,
+            scheduledAt: Date.now() + delay,
+            executed: false
         };
-        post.comments.push(comment);
-        _setData(data);
-        return comment;
+        INTERACTION_QUEUE.push(task);
+        setTimeout(function() {
+            _executeInteraction(task);
+        }, delay);
     }
 
-    function _addReplyToComment(postId, commentId, replyText) {
+    function _executeInteraction(task) {
+        if (task.executed) return;
+        task.executed = true;
         var data = _getData();
-        var post = data.posts.find(function(p) { return p.id === postId; });
+        var post = data.posts.find(function(p) { return p.id === task.postId; });
         if (!post) return;
-        var comment = post.comments.find(function(c) { return c.id === commentId; });
-        if (!comment) return;
-        comment.reply = {
-            text: replyText,
-            timestamp: new Date().toISOString()
-        };
-        comment.replied = true;
-        _setData(data);
-    }
 
-    window.partnerPublishPost = function(text, memberName) {
-        if (!text || !text.trim()) return;
-        var members = _getGroupMembers();
-        var member = null;
-        if (memberName) {
-            for (var i = 0; i < members.length; i++) {
-                if (members[i].name === memberName) {
-                    member = members[i];
+        // 检查是否已被删除或已处理
+        if (task.type === 'like') {
+            // 群成员点赞（每个成员最多点一次）
+            var members = _getGroupMembers();
+            var availableMembers = members.filter(function(m) {
+                return !post.likedByMembers[m.name];
+            });
+            if (availableMembers.length === 0) return;
+            var member = _randomPick(availableMembers);
+            post.likes += 1;
+            post.likedByMembers[member.name] = true;
+            _setData(data);
+            _notify('💕 ' + member.name + ' 赞了你的动态', 'info', 3000);
+            _refreshUI();
+        } else if (task.type === 'comment') {
+            // 群成员评论
+            var members2 = _getGroupMembers();
+            var availableMembers2 = members2.filter(function(m) {
+                return m.name !== _getMyNameSetting();
+            });
+            if (availableMembers2.length === 0) return;
+            var member2 = _randomPick(availableMembers2);
+            var text = _generateRandomCombinedText();
+            var comment = {
+                id: _generateId(),
+                author: 'partner',
+                authorName: member2.name,
+                text: text,
+                timestamp: new Date().toISOString(),
+                reply: null,
+                replied: false
+            };
+            post.comments.push(comment);
+            _setData(data);
+            _notify('💬 ' + member2.name + ' 评论了你的动态', 'info', 3000);
+            _refreshUI();
+        } else if (task.type === 'reply' && task.commentId) {
+            // 群成员回复评论
+            var commentObj = null;
+            for (var ci = 0; ci < post.comments.length; ci++) {
+                if (post.comments[ci].id === task.commentId) {
+                    commentObj = post.comments[ci];
                     break;
                 }
             }
+            if (!commentObj || commentObj.replied) return;
+            var members3 = _getGroupMembers();
+            var availableMembers3 = members3.filter(function(m) {
+                return m.name !== commentObj.authorName && m.name !== _getMyNameSetting();
+            });
+            if (availableMembers3.length === 0) return;
+            var member3 = _randomPick(availableMembers3);
+            var replyText = _generateRandomCombinedText();
+            commentObj.reply = {
+                text: replyText,
+                timestamp: new Date().toISOString(),
+                authorName: member3.name
+            };
+            commentObj.replied = true;
+            _setData(data);
+            _notify('💬 ' + member3.name + ' 回复了评论', 'info', 3000);
+            _refreshUI();
         }
-        if (!member && members.length > 0) {
-            member = members[Math.floor(Math.random() * members.length)];
-        }
-        if (!member) {
-            _notify('没有可用的群成员', 'warning');
-            return;
-        }
-        var post = _addPost('partner', text, new Date().toISOString(), member.name, member.avatar);
+    }
+
+    function _refreshUI() {
         var container = document.getElementById('moments-content');
         var activeTab = document.querySelector('.moments-tab.active');
         if (container && activeTab) renderTab(activeTab.dataset.tab, container);
-        _notify('📱 ' + member.name + ' 发布了新动态', 'success', 2000);
-        return post;
-    };
+    }
 
+    // =============================================
+    // 对方发布朋友圈（每天2-4条，时间随机）
+    // =============================================
     function _forceGeneratePartnerPosts() {
         var data = _getData();
         var today = new Date().toDateString();
@@ -376,31 +415,76 @@
             return;
         }
 
+        // 检查今天是否已经生成过
         var existingPartnerPosts = data.posts.filter(function(p) { return p.author === 'partner'; });
-        if (data.lastGenerateDate === today && existingPartnerPosts.length > 0) {
+        var todayPosts = existingPartnerPosts.filter(function(p) {
+            return new Date(p.timestamp).toDateString() === today;
+        });
+
+        if (data.lastGenerateDate === today && todayPosts.length >= 2) {
             return;
         }
 
-        data.posts = data.posts.filter(function(p) { return p.author !== 'partner'; });
-        
+        // 如果是新的一天，清除旧的partner帖子（保留今天的逻辑，但保留历史记录）
+        if (data.lastGenerateDate !== today) {
+            // 不删除旧帖子，只是标记新的一天
+        }
+
         var activeMembers = members.filter(function(m) { return m.name && m.name.trim(); });
         if (activeMembers.length === 0) return;
 
-        var count = Math.min(1 + Math.floor(Math.random() * 3), activeMembers.length * 2);
+        // 每天2-4条
+        var count = 2 + Math.floor(Math.random() * 3);
         var now = new Date();
-        for (var idx = 0; idx < count; idx++) {
+        var todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        
+        // 生成随机时间点，确保分布均匀
+        var timeSlots = [];
+        for (var i = 0; i < count; i++) {
+            var slot = 8 + Math.random() * 12; // 8:00 - 20:00
+            timeSlots.push(slot);
+        }
+        timeSlots.sort(function(a, b) { return a - b; });
+
+        // 清除今天已存在的partner帖子，重新生成
+        data.posts = data.posts.filter(function(p) {
+            if (p.author === 'partner') {
+                return new Date(p.timestamp).toDateString() !== today;
+            }
+            return true;
+        });
+
+        for (var idx = 0; idx < timeSlots.length; idx++) {
             var member = activeMembers[Math.floor(Math.random() * activeMembers.length)];
-            var text = _generatePartnerPostText();
-            var hours = Math.random() * 24;
-            var minutes = Math.random() * 60;
-            var ts = new Date(now);
-            ts.setHours(Math.floor(hours), Math.floor(minutes), Math.floor(Math.random() * 60), 0);
+            var text = _generateRandomCombinedText();
+            var hours = Math.floor(timeSlots[idx]);
+            var minutes = Math.floor((timeSlots[idx] - hours) * 60);
+            var ts = new Date(todayStart);
+            ts.setHours(hours, minutes, Math.floor(Math.random() * 60), 0);
             _addPost('partner', text, ts.toISOString(), member.name, member.avatar);
         }
+
         data.lastGenerateDate = today;
         _setData(data);
     }
 
+    // =============================================
+    // 手动触发群成员互动
+    // =============================================
+    window.triggerPartnerInteraction = function(postId, type) {
+        _schedulePartnerInteraction(postId, type);
+    };
+
+    window.forcePartnerPublish = function() {
+        _forceGeneratePartnerPosts();
+        _refreshUI();
+        _notify('已生成今日动态', 'success');
+    };
+
+    // =============================================
+    // 时间格式化
+    // =============================================
     function formatTime(iso) {
         var date = new Date(iso);
         var now = new Date();
@@ -421,7 +505,6 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'cover-settings-modal';
-        // iOS兼容：使用-webkit-前缀
         wrap.style.cssText = 'position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
 
         var inner = document.createElement('div');
@@ -944,11 +1027,43 @@
         document.getElementById('reply-submit').onclick = function() {
             var text = document.getElementById('reply-text').value.trim();
             if (!text) { _notify('请输入回复内容', 'warning'); return; }
-            _addReplyToComment(postId, commentId, text);
+            
+            // 添加我的回复
+            var data = _getData();
+            var post = data.posts.find(function(p) { return p.id === postId; });
+            if (!post) { _notify('帖子不存在', 'error'); return; }
+            
+            var comment = post.comments.find(function(c) { return c.id === commentId; });
+            if (!comment) { _notify('评论不存在', 'error'); return; }
+            
+            // 如果是回复群成员的评论，触发群成员回复
+            if (comment.author === 'partner' && !comment.replied) {
+                comment.reply = {
+                    text: text,
+                    timestamp: new Date().toISOString(),
+                    authorName: _getMyNameSetting()
+                };
+                comment.replied = true;
+                _setData(data);
+                close();
+                _refreshUI();
+                _notify('回复已发送', 'success');
+                
+                // 触发其他群成员回复（2-4分钟）
+                _schedulePartnerInteraction(postId, 'reply', commentId);
+                return;
+            }
+            
+            // 普通回复逻辑
+            comment.reply = {
+                text: text,
+                timestamp: new Date().toISOString(),
+                authorName: _getMyNameSetting()
+            };
+            comment.replied = true;
+            _setData(data);
             close();
-            var container = document.getElementById('moments-content');
-            var activeTab = document.querySelector('.moments-tab.active');
-            if (container && activeTab) renderTab(activeTab.dataset.tab, container);
+            _refreshUI();
             _notify('回复已发送', 'success');
         };
     }
@@ -1018,7 +1133,7 @@
 
             for (var ci = 0; ci < post.comments.length; ci++) {
                 var c = post.comments[ci];
-                var cName = c.author === 'me' ? _getMyNameSetting() : _getPartnerName();
+                var cName = c.author === 'me' ? _getMyNameSetting() : (c.authorName || _getPartnerName());
                 var cAvatar = c.author === 'me' ? '👤' : '🌸';
                 var cTime = formatTime(c.timestamp);
 
@@ -1031,8 +1146,9 @@
                     '</div>';
 
                 if (c.reply) {
+                    var replyName = c.reply.authorName || _getPartnerName();
                     html += '<div style="margin-left:20px;margin-top:2px;padding:6px 12px;background:rgba(var(--accent-color-rgb),0.05);border-radius:8px;border-left:2px solid rgba(var(--accent-color-rgb),0.2);font-size:13px;color:var(--text-secondary);">' +
-                        '<span style="font-weight:500;color:var(--text-primary);">🌸 ' + _getPartnerName() + '</span> ' +
+                        '<span style="font-weight:500;color:var(--text-primary);">🌸 ' + _esc(replyName) + '</span> ' +
                         '<span style="color:var(--text-primary);">' + _esc(c.reply.text) + '</span> ' +
                         '<span style="font-size:10px;color:var(--text-secondary);">' + formatTime(c.reply.timestamp) + '</span>' +
                         '</div>';
@@ -1120,12 +1236,27 @@
         document.getElementById('publish-submit').onclick = function() {
             var text = document.getElementById('publish-text').value.trim();
             if (!text) { _notify('请输入内容', 'warning'); return; }
-            _addPost('me', text);
+            var post = _addPost('me', text);
             close();
             var container = document.getElementById('moments-content');
             var activeTab = document.querySelector('.moments-tab.active');
             if (container && activeTab) renderTab(activeTab.dataset.tab, container);
             _notify('发布成功 ✨', 'success');
+            
+            // 发布后触发群成员互动（评论+点赞）
+            var postId = post.id;
+            // 点赞：1-3分钟后
+            setTimeout(function() {
+                _schedulePartnerInteraction(postId, 'like');
+            }, 60000 + Math.random() * 120000);
+            // 评论：3-5分钟后
+            setTimeout(function() {
+                _schedulePartnerInteraction(postId, 'comment');
+            }, 180000 + Math.random() * 120000);
+            // 再安排一个额外的评论（不同成员）
+            setTimeout(function() {
+                _schedulePartnerInteraction(postId, 'comment');
+            }, 240000 + Math.random() * 180000);
         };
     }
 
@@ -1160,15 +1291,21 @@
             var text = document.getElementById('comment-text').value.trim();
             if (!text) { _notify('请输入评论', 'warning'); return; }
 
-            var posts = _getPosts();
-            var post = null;
-            for (var i = 0; i < posts.length; i++) {
-                if (posts[i].id === postId) { post = posts[i]; break; }
-            }
+            var data = _getData();
+            var post = data.posts.find(function(p) { return p.id === postId; });
             if (!post) { _notify('帖子不存在', 'error'); return; }
 
-            var comment = _addComment(postId, 'me', text);
-            if (!comment) { _notify('评论失败', 'error'); return; }
+            var comment = {
+                id: _generateId(),
+                author: 'me',
+                authorName: _getMyNameSetting(),
+                text: text,
+                timestamp: new Date().toISOString(),
+                reply: null,
+                replied: false
+            };
+            post.comments.push(comment);
+            _setData(data);
 
             close();
             var container = document.getElementById('moments-content');
@@ -1176,35 +1313,12 @@
             if (container && activeTab) renderTab(activeTab.dataset.tab, container);
             _notify('评论已发送', 'success');
 
+            // 如果是群成员的帖子，触发群成员回复（2-4分钟）
             if (post.author === 'partner') {
-                var delay = 3000 + Math.random() * 180000;
+                var commentId = comment.id;
                 setTimeout(function() {
-                    var freshPosts = _getPosts();
-                    var freshPost = null;
-                    for (var fi = 0; fi < freshPosts.length; fi++) {
-                        if (freshPosts[fi].id === postId) { freshPost = freshPosts[fi]; break; }
-                    }
-                    if (!freshPost) return;
-                    var latestComment = freshPost.comments[freshPost.comments.length - 1];
-                    if (latestComment && latestComment.author === 'me' && !latestComment.replied) {
-                        var cards = _getReplyCards();
-                        var count = 1 + Math.floor(Math.random() * 3);
-                        var shuffled = cards.slice();
-                        for (var si = shuffled.length - 1; si > 0; si--) {
-                            var sj = Math.floor(Math.random() * (si + 1));
-                            var st = shuffled[si];
-                            shuffled[si] = shuffled[sj];
-                            shuffled[sj] = st;
-                        }
-                        var picked = shuffled.slice(0, count);
-                        var replyText = picked.join('');
-                        _addReplyToComment(postId, latestComment.id, replyText);
-                        _notify('💬 ' + _getPartnerName() + ' 回复了你的评论', 'info', 3000);
-                        var container2 = document.getElementById('moments-content');
-                        var activeTab2 = document.querySelector('.moments-tab.active');
-                        if (container2 && activeTab2) renderTab(activeTab2.dataset.tab, container2);
-                    }
-                }, delay);
+                    _schedulePartnerInteraction(postId, 'reply', commentId);
+                }, 120000 + Math.random() * 120000);
             }
         };
     }
@@ -1213,7 +1327,6 @@
     // 朋友圈主界面（iOS兼容修复）
     // =============================================
     window.openMoments = function() {
-        // 防止多次点击打开多个弹窗
         if (document.getElementById('moments-modal')) {
             return;
         }
@@ -1222,13 +1335,11 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'moments-modal';
-        // iOS兼容：使用-webkit-前缀
         wrap.style.cssText = 'position:fixed;inset:0;z-index:10010;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);';
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:0;width:min(460px, 94vw);max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);border:1px solid var(--border-color);';
 
-        // 封面区域
         var coverUrl = _getCoverImage();
         var defaultCover = 'linear-gradient(135deg, #2d1b3d 0%, #1a1a2e 50%, #16213e 100%)';
         var coverStyle = coverUrl ? 'url(' + coverUrl + ')' : defaultCover;
@@ -1256,7 +1367,6 @@
 
         inner.appendChild(coverSection);
 
-        // 标题栏
         var header = document.createElement('div');
         header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid var(--border-color);flex-shrink:0;background:var(--primary-bg);';
 
@@ -1299,14 +1409,12 @@
         header.appendChild(rightSection);
         inner.appendChild(header);
 
-        // Tab切换
         var tabBar = document.createElement('div');
         tabBar.style.cssText = 'display:flex;border-bottom:1px solid rgba(var(--border-color-rgb,0,0,0),0.08);flex-shrink:0;background:var(--primary-bg);padding:0 16px;';
         tabBar.innerHTML = '<button class="moments-tab active" data-tab="me" style="flex:1;padding:12px 4px 10px;border:none;background:transparent;font-weight:600;color:var(--text-primary);cursor:pointer;font-family:var(--font-family);font-size:14px;position:relative;border-bottom:2px solid var(--accent-color);-webkit-tap-highlight-color:transparent;">我的</button>' +
             '<button class="moments-tab" data-tab="partner" style="flex:1;padding:12px 4px 10px;border:none;background:transparent;font-weight:400;color:var(--text-secondary);cursor:pointer;font-family:var(--font-family);font-size:14px;position:relative;border-bottom:2px solid transparent;-webkit-tap-highlight-color:transparent;">群成员</button>';
         inner.appendChild(tabBar);
 
-        // 内容列表
         var contentContainer = document.createElement('div');
         contentContainer.id = 'moments-content';
         contentContainer.style.cssText = 'flex:1;overflow-y:auto;padding:12px 16px 16px;background:var(--secondary-bg);-webkit-overflow-scrolling:touch;';
@@ -1314,7 +1422,6 @@
         renderTab('me', contentContainer);
         inner.appendChild(contentContainer);
 
-        // 底部发布按钮
         var footer = document.createElement('div');
         footer.style.cssText = 'display:flex;justify-content:flex-end;padding:10px 16px 14px;border-top:1px solid var(--border-color);flex-shrink:0;background:rgba(var(--primary-bg-rgb),0.95);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);';
         var addBtn = document.createElement('button');
@@ -1329,14 +1436,12 @@
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
 
-        // 点击外部关闭
         wrap.addEventListener('click', function(e) {
             if (e.target === wrap) {
                 wrap.remove();
             }
         });
 
-        // Tab切换
         tabBar.querySelectorAll('.moments-tab').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 tabBar.querySelectorAll('.moments-tab').forEach(function(b) {
@@ -1356,7 +1461,6 @@
             });
         });
 
-        // 阻止滚动穿透
         contentContainer.addEventListener('touchmove', function(e) {
             e.stopPropagation();
         }, { passive: true });
@@ -1371,7 +1475,33 @@
     window.editMember = editMember;
     window.addMember = addMember;
     window.removeMember = removeMember;
-    window.partnerPublishPost = partnerPublishPost;
+    window.partnerPublishPost = function(text, memberName) {
+        if (!text || !text.trim()) return;
+        var members = _getGroupMembers();
+        var member = null;
+        if (memberName) {
+            for (var i = 0; i < members.length; i++) {
+                if (members[i].name === memberName) {
+                    member = members[i];
+                    break;
+                }
+            }
+        }
+        if (!member && members.length > 0) {
+            member = members[Math.floor(Math.random() * members.length)];
+        }
+        if (!member) {
+            _notify('没有可用的群成员', 'warning');
+            return;
+        }
+        var post = _addPost('partner', text, new Date().toISOString(), member.name, member.avatar);
+        var container = document.getElementById('moments-content');
+        var activeTab = document.querySelector('.moments-tab.active');
+        if (container && activeTab) renderTab(activeTab.dataset.tab, container);
+        _notify('📱 ' + member.name + ' 发布了新动态', 'success', 2000);
+        return post;
+    };
+    window.forcePartnerPublish = _forceGeneratePartnerPosts;
 
-    console.log('[朋友圈] 模块已加载（iOS兼容修复版）');
+    console.log('[朋友圈] 模块已加载（智能互动增强版）');
 })();
