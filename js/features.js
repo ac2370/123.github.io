@@ -1867,3 +1867,38 @@ window.tryShowDailyGreeting = function() {
         if (modal) modal.classList.remove('hidden');
     } catch(e) { console.warn('Daily greeting show error:', e); }
 };
+
+// =============================================
+// 初始化组合菜单（确保在页面加载后执行）
+// =============================================
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (typeof renderComboMenu === 'function') {
+            renderComboMenu();
+        }
+    }, 500);
+});
+
+// combo-btn 点击切换
+document.addEventListener('DOMContentLoaded', function() {
+    var comboBtn = document.getElementById('combo-btn');
+    var picker = document.getElementById('user-sticker-picker');
+    
+    if (comboBtn && picker) {
+        comboBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            picker.classList.toggle('active');
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (picker.classList.contains('active') && 
+                !picker.contains(e.target) && 
+                e.target !== comboBtn && 
+                !comboBtn.contains(e.target)) {
+                picker.classList.remove('active');
+            }
+        });
+    }
+});
+
+console.log('[红包+表情包] 功能已加载');
