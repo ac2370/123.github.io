@@ -1,3 +1,168 @@
+// =============================================
+// 红包数据管理
+// =============================================
+var REDPACKET_KEY = 'redpacket_data';
+
+function _getRedpacketData() {
+    try {
+        return JSON.parse(localStorage.getItem(REDPACKET_KEY)) || { members: {}, myAmount: 0 };
+    } catch {
+        return { members: {}, myAmount: 0 };
+    }
+}
+
+function _setRedpacketData(data) {
+    localStorage.setItem(REDPACKET_KEY, JSON.stringify(data));
+}
+
+function _getGroupMemberListForRedpacket() {
+    var members = [];
+    try {
+        var groupData = JSON.parse(localStorage.getItem('group_chat_data') || '{}');
+        if (groupData.members && groupData.members.length > 0) {
+            members = groupData.members.map(function(m) { return m.name || m; }).filter(function(n) { return n && n.trim(); });
+        }
+    } catch(e) {}
+    if (members.length === 0) {
+        try {
+            var storedMembers = localStorage.getItem('groupMembers');
+            if (storedMembers) {
+                var parsed = JSON.parse(storedMembers);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    members = parsed.map(function(m) { return typeof m === 'string' ? m : (m.name || m); }).filter(function(n) { return n && n.trim(); });
+                }
+            }
+        } catch(e) {}
+    }
+    if (members.length === 0) {
+        members = ['沈星回', '陆沉'];
+    }
+    return members;
+}
+
+function _getMyNameForRedpacket() {
+    try {
+        if (typeof settings !== 'undefined' && settings.myName) return settings.myName;
+    } catch(e) {}
+    var stored = localStorage.getItem('moments_my_name');
+    if (stored) return stored;
+    return '阿晏';
+}
+
+function _renderRedpacketPanel(area) {
+    if (!area) return;
+    
+    var redData = _getRedpacketData();
+    var members = _getGroupMemberListForRedpacket();
+    var myName = _getMyNameForRedpacket();
+    
+    var html = '';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:0.5px;padding:4px 2px 6px;border-bottom:1px solid var(--border-color);">👥 群聊成员</div>';
+    
+    members.forEach(function(name) {
+        var amount = redData.members[name] !== undefined ? redData.members[name] : 0;
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 4px;border-bottom:1px solid rgba(var(--border-color-rgb),0.1);">';
+        html += '<span style="font-size:13px;color:var(--text-primary);">' + name + '</span>';
+        html += '<div style="display:flex;align-items:center;gap:6px;">';
+        html += '<span style="font-size:12px;color:var(--accent-color);font-weight:600;">¥' + amount.toFixed(1) + '</span>';
+        html += '<button class="redpacket-edit-btn" data-name="' + name.replace(/"/g, '&quot;') + '" style="background:none;border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--text-secondary);font-family:var(--font-family);">设置</button>';
+        html += '<button class="redpacket-send-btn" data-name="' + name.replace(/"/g, '&quot;') + '" style="background:none;border:1px solid var(--accent-color);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--accent-color);font-family:var(--font-family);">发</button>';
+        html += '</div></div>';
+    });
+    
+    html += '<div style="font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:0.5px;padding:8px 2px 6px;border-bottom:1px solid var(--border-color);margin-top:8px;">👤 我方</div>';
+    var myAmount = redData.myAmount || 0;
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 4px;">';
+    html += '<span style="font-size:13px;color:var(--text-primary);">' + myName + '</span>';
+    html += '<div style="display:flex;align-items:center;gap:6px;">';
+    html += '<span style="font-size:12px;color:var(--accent-color);font-weight:600;">¥' + myAmount.toFixed(1) + '</span>';
+    html += '<button id="redpacket-my-edit-btn" style="background:none;border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--text-secondary);font-family:var(--font-family);">设置</button>';
+    html += '</div></div>';
+    
+    html += '<div style="font-size:10px;color:var(--text-secondary);opacity:0.6;padding:8px 2px 0;text-align:center;border-top:1px dashed var(--border-color);margin-top:8px;">';
+    html += '💡 点击"发"按钮给对方发红包（50%概率随机扣除）';
+    html += '</div>';
+    
+    area.innerHTML = html;
+    
+    area.querySelectorAll('.redpacket-edit-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var name = this.dataset.name;
+            var redData2 = _getRedpacketData();
+            var current = redData2.members[name] !== undefined ? redData2.members[name] : 0;
+            var newAmount = prompt('设置 ' + name + ' 的红包总额（元）：', current);
+            if (newAmount !== null) {
+                var val = parseFloat(newAmount);
+                if (!isNaN(val) && val >= 0) {
+                    redData2.members[name] = val;
+                    _setRedpacketData(redData2);
+                    _renderRedpacketPanel(area);
+                    if (typeof showNotification === 'function') showNotification(name + ' 红包已设置为 ¥' + val.toFixed(1), 'success', 1500);
+                } else {
+                    if (typeof showNotification === 'function') showNotification('请输入有效数字', 'warning');
+                }
+            }
+        });
+    });
+    
+    area.querySelectorAll('.redpacket-send-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var name = this.dataset.name;
+            var redData2 = _getRedpacketData();
+            var targetAmount = redData2.members[name] !== undefined ? redData2.members[name] : 0;
+            if (targetAmount <= 0) {
+                if (typeof showNotification === 'function') showNotification(name + ' 的红包已空', 'info');
+                return;
+            }
+            if (Math.random() > 0.5) {
+                if (typeof showNotification === 'function') showNotification('对方没有收到红包 😅', 'info', 1500);
+                return;
+            }
+            var amount = Math.random() * targetAmount;
+            amount = Math.round(amount * 10) / 10;
+            if (amount < 0.1) amount = 0.1;
+            if (amount > targetAmount) amount = targetAmount;
+            redData2.members[name] = Math.round((targetAmount - amount) * 10) / 10;
+            _setRedpacketData(redData2);
+            if (typeof addMessage === 'function') {
+                addMessage({
+                    id: Date.now(),
+                    sender: 'system',
+                    text: '🧧 ' + name + ' 收到了 ¥' + amount.toFixed(1) + ' 红包（剩余 ¥' + redData2.members[name].toFixed(1) + '）',
+                    timestamp: new Date(),
+                    type: 'system',
+                    status: 'sent'
+                });
+                if (typeof playSound === 'function') playSound('send');
+            }
+            _renderRedpacketPanel(area);
+            if (typeof showNotification === 'function') showNotification('🧧 ' + name + ' 收到 ¥' + amount.toFixed(1) + ' 红包', 'success', 2000);
+        });
+    });
+    
+    var myEditBtn = document.getElementById('redpacket-my-edit-btn');
+    if (myEditBtn) {
+        myEditBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var redData2 = _getRedpacketData();
+            var current = redData2.myAmount || 0;
+            var newAmount = prompt('设置我的红包总额（元）：', current);
+            if (newAmount !== null) {
+                var val = parseFloat(newAmount);
+                if (!isNaN(val) && val >= 0) {
+                    redData2.myAmount = val;
+                    _setRedpacketData(redData2);
+                    _renderRedpacketPanel(area);
+                    if (typeof showNotification === 'function') showNotification('我的红包已设置为 ¥' + val.toFixed(1), 'success', 1500);
+                } else {
+                    if (typeof showNotification === 'function') showNotification('请输入有效数字', 'warning');
+                }
+            }
+        });
+    }
+}
 (function() {
     var MY_SYM_KEY   = 'pokeSym_my';
     var PTR_SYM_KEY  = 'pokeSym_partner';
@@ -365,32 +530,36 @@
 })();
 
 function renderComboMenu() {
-    const content = document.getElementById('user-sticker-content');
+    var content = document.getElementById('user-sticker-content');
+    if (!content) return;
     content.innerHTML = '';
     
-    const tabBar = document.createElement('div');
+    var tabBar = document.createElement('div');
     tabBar.style.cssText = 'display:flex; gap:8px; padding:8px; border-bottom:1px solid var(--border-color);';
     tabBar.innerHTML = `
-        <button class="combo-tab active" data-tab="emoji" style="flex:1; padding:8px; border:none; background:var(--accent-color); color:#fff; border-radius:8px; cursor:pointer;">
-            😊 表情
+        <button class="combo-tab active" data-tab="redpacket" style="flex:1; padding:8px; border:none; background:var(--accent-color); color:#fff; border-radius:8px; cursor:pointer; font-family:var(--font-family);">
+            🧧 红包
         </button>
-        <button class="combo-tab" data-tab="poke" style="flex:1; padding:8px; border:none; background:var(--secondary-bg); color:var(--text-primary); border-radius:8px; cursor:pointer;">
+        <button class="combo-tab" data-tab="sticker" style="flex:1; padding:8px; border:none; background:var(--secondary-bg); color:var(--text-primary); border-radius:8px; cursor:pointer; font-family:var(--font-family);">
+            😊 表情包
+        </button>
+        <button class="combo-tab" data-tab="poke" style="flex:1; padding:8px; border:none; background:var(--secondary-bg); color:var(--text-primary); border-radius:8px; cursor:pointer; font-family:var(--font-family);">
             ✨ 拍一拍
         </button>
     `;
     
-    const contentArea = document.createElement('div');
+    var contentArea = document.createElement('div');
     contentArea.id = 'combo-content-area';
-    contentArea.style.cssText = 'padding:10px; max-height:240px; overflow-y:auto;';
+    contentArea.style.cssText = 'padding:10px; max-height:260px; overflow-y:auto;';
     
     content.appendChild(tabBar);
     content.appendChild(contentArea);
     
-    showEmojiTab();
+    showRedpacketTab();
     
-    tabBar.querySelectorAll('.combo-tab').forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabBar.querySelectorAll('.combo-tab').forEach(b => {
+    tabBar.querySelectorAll('.combo-tab').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            tabBar.querySelectorAll('.combo-tab').forEach(function(b) {
                 b.style.background = 'var(--secondary-bg)';
                 b.style.color = 'var(--text-primary)';
                 b.classList.remove('active');
@@ -399,14 +568,100 @@ function renderComboMenu() {
             btn.style.color = '#fff';
             btn.classList.add('active');
             
-            if (btn.dataset.tab === 'emoji') {
-                showEmojiTab();
+            var tab = btn.dataset.tab;
+            if (tab === 'redpacket') {
+                showRedpacketTab();
+            } else if (tab === 'sticker') {
+                showStickerTab();
             } else {
                 showPokeTab();
             }
         });
     });
 }
+
+function showRedpacketTab() {
+    var area = document.getElementById('combo-content-area');
+    if (!area) return;
+    _renderRedpacketPanel(area);
+}
+
+function showStickerTab() {
+    var area = document.getElementById('combo-content-area');
+    if (!area) return;
+    area.innerHTML = '';
+    area.style.display = 'block';
+    area.style.gridTemplateColumns = '';
+    area.style.gap = '';
+    
+    var stickers = [];
+    try {
+        var stored = localStorage.getItem('myStickers');
+        if (stored) {
+            stickers = JSON.parse(stored);
+        }
+    } catch(e) {}
+    
+    if (window.localforage) {
+        localforage.getItem('myStickers').then(function(data) {
+            if (data && Array.isArray(data) && data.length > 0) {
+                stickers = data;
+                renderStickerGrid(stickers);
+            }
+        }).catch(function() {});
+    }
+    
+    function renderStickerGrid(stickerList) {
+        if (!stickerList || stickerList.length === 0) {
+            area.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-secondary);font-size:13px;">' +
+                '<div style="font-size:32px;margin-bottom:10px;">📭</div>' +
+                '还没有我的专属表情哦<br>' +
+                '<span style="font-size:11px;opacity:0.6;">点击右上角"添加"按钮上传图片~</span>' +
+                '</div>';
+            return;
+        }
+        var html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">';
+        stickerList.forEach(function(src) {
+            html += '<div style="aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--border-color);cursor:pointer;transition:all 0.2s;" onclick="window.sendSticker(\'' + src.replace(/'/g, "\\'") + '\')" onmouseover="this.style.borderColor=\'var(--accent-color)\';this.style.transform=\'scale(1.03)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.transform=\'scale(1)\'">';
+            html += '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;">';
+            html += '</div>';
+        });
+        html += '</div>';
+        area.innerHTML = html;
+    }
+    
+    renderStickerGrid(stickers);
+}
+
+window.sendSticker = function(src) {
+    if (typeof addMessage === 'function') {
+        addMessage({
+            id: Date.now(),
+            sender: 'user',
+            text: '',
+            timestamp: new Date(),
+            image: src,
+            status: 'sent',
+            type: 'normal'
+        });
+        if (typeof playSound === 'function') playSound('send');
+        var picker = document.getElementById('user-sticker-picker');
+        if (picker) picker.classList.remove('active');
+        var delayRange = (typeof settings !== 'undefined' && settings.replyDelayMax) ? settings.replyDelayMax - settings.replyDelayMin : 4000;
+        var delayMin = (typeof settings !== 'undefined' && settings.replyDelayMin) ? settings.replyDelayMin : 3000;
+        var randomDelay = delayMin + Math.random() * delayRange;
+        setTimeout(function() {
+            if (typeof simulateReply === 'function') simulateReply();
+        }, randomDelay);
+    }
+};
+
+window._refreshRedpacketPanel = function() {
+    var area = document.getElementById('combo-content-area');
+    if (area) {
+        _renderRedpacketPanel(area);
+    }
+};
 
 function showEmojiTab() {
     const area = document.getElementById('combo-content-area');
