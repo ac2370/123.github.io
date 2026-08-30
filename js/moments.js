@@ -1,4 +1,4 @@
-// moments.js - 朋友圈功能（完整版 + 头像与昵称管理 + 智能互动）- iOS兼容修复版
+// moments.js - 朋友圈功能（完整版 + 手机端全面兼容）
 (function() {
     'use strict';
 
@@ -41,7 +41,6 @@
         return result;
     }
 
-    // 从回复库中随机拼凑3-5条内容
     function _generateRandomCombinedText() {
         var cards = _getReplyCards();
         if (cards.length < 2) {
@@ -54,7 +53,7 @@
             shuffled[i] = shuffled[j];
             shuffled[j] = temp;
         }
-        var count = 3 + Math.floor(Math.random() * 3); // 3-5条
+        var count = 3 + Math.floor(Math.random() * 3);
         var picked = shuffled.slice(0, Math.min(count, shuffled.length));
         var puncts = ['，', '。', '？', '！', '...', '～', '、', '；'];
         var result = '';
@@ -395,7 +394,7 @@
     }
 
     // =============================================
-    // 对方发布朋友圈（每天2-4条，时间随机）
+    // 对方发布朋友圈
     // =============================================
     function _forceGeneratePartnerPosts() {
         var data = _getData();
@@ -491,7 +490,8 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'cover-settings-modal';
-        wrap.style.cssText = 'position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        // 移除 backdrop-filter 避免 iOS 兼容问题
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
@@ -612,7 +612,8 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'avatar-settings-modal';
-        wrap.style.cssText = 'position:fixed;inset:0;z-index:10055;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10055;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        // 移除 backdrop-filter
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:20px;width:min(400px, 92vw);max-height:85vh;overflow-y:auto;border:1px solid var(--border-color);';
@@ -688,7 +689,8 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'edit-my-modal';
-        wrap.style.cssText = 'position:fixed;inset:0;z-index:10056;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10056;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        // 移除 backdrop-filter
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
@@ -786,7 +788,8 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'edit-member-modal';
-        wrap.style.cssText = 'position:fixed;inset:0;z-index:10057;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10057;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        // 移除 backdrop-filter
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
@@ -880,7 +883,8 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'add-member-modal';
-        wrap.style.cssText = 'position:fixed;inset:0;z-index:10058;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10058;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        // 移除 backdrop-filter
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
@@ -990,7 +994,7 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'reply-modal';
-        wrap.style.cssText = 'position:fixed;inset:0;z-index:10035;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10035;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
@@ -1094,7 +1098,7 @@
             var time = formatTime(post.timestamp);
             var commentCount = post.comments.length;
 
-            html += '<div class="moments-post" data-id="' + post.id + '" style="background:rgba(var(--secondary-bg-rgb,255,255,255),0.85);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-radius:16px;padding:16px 16px 12px;margin-bottom:14px;border:1px solid rgba(var(--border-color-rgb,0,0,0),0.06);box-shadow:0 1px 4px rgba(0,0,0,0.04);">' +
+            html += '<div class="moments-post" data-id="' + post.id + '" style="background:rgba(var(--secondary-bg-rgb,255,255,255),0.85);border-radius:16px;padding:16px 16px 12px;margin-bottom:14px;border:1px solid rgba(var(--border-color-rgb,0,0,0),0.06);box-shadow:0 1px 4px rgba(0,0,0,0.04);">' +
                 '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">' +
                     '<span style="font-size:20px;display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;">' + avatarHtml + '</span>' +
                     '<span style="font-weight:600;color:var(--text-primary);font-size:15px;">' + _esc(name) + '</span>' +
@@ -1145,6 +1149,7 @@
 
         container.innerHTML = html;
 
+        // 使用事件委托提高移动端性能
         container.querySelectorAll('.moments-like-btn').forEach(function(btn) {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -1193,7 +1198,7 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'publish-modal';
-        wrap.style.cssText = 'position:fixed;inset:0;z-index:10020;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10020;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
@@ -1243,7 +1248,7 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'comment-modal';
-        wrap.style.cssText = 'position:fixed;inset:0;z-index:10030;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10030;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
@@ -1299,11 +1304,10 @@
     }
 
     // =============================================
-    // 朋友圈主界面（修复：移除重复检查，增加防冲突）
+    // 朋友圈主界面 - 手机端全面兼容
     // =============================================
     window.openMoments = function() {
-        // 修复：移除 document.getElementById('moments-modal') 的阻塞检查
-        // 改用更安全的方式：如果已存在则先移除再重建
+        // 移除已存在的弹窗
         var existingModal = document.getElementById('moments-modal');
         if (existingModal) {
             existingModal.remove();
@@ -1313,9 +1317,11 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'moments-modal';
-        wrap.style.cssText = 'position:fixed;inset:0;z-index:10010;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);';
+        // 使用更简单的背景，移除 backdrop-filter 避免 iOS 兼容问题
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10010;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
 
         var inner = document.createElement('div');
+        // 使用简单样式，避免 iOS 渲染问题
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:0;width:min(460px, 94vw);max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);border:1px solid var(--border-color);';
 
         var coverUrl = _getCoverImage();
@@ -1334,7 +1340,7 @@
         coverSection.appendChild(coverText);
 
         var coverBtnHint = document.createElement('div');
-        coverBtnHint.style.cssText = 'position:absolute;top:12px;right:14px;background:rgba(0,0,0,0.45);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:4px 12px;border-radius:14px;font-size:11px;color:rgba(255,255,255,0.85);pointer-events:none;';
+        coverBtnHint.style.cssText = 'position:absolute;top:12px;right:14px;background:rgba(0,0,0,0.45);padding:4px 12px;border-radius:14px;font-size:11px;color:rgba(255,255,255,0.85);pointer-events:none;';
         coverBtnHint.textContent = '📷 更换封面';
         coverSection.appendChild(coverBtnHint);
 
@@ -1395,13 +1401,14 @@
 
         var contentContainer = document.createElement('div');
         contentContainer.id = 'moments-content';
+        // 添加 -webkit-overflow-scrolling 提升 iOS 滚动体验
         contentContainer.style.cssText = 'flex:1;overflow-y:auto;padding:12px 16px 16px;background:var(--secondary-bg);-webkit-overflow-scrolling:touch;';
 
         renderTab('me', contentContainer);
         inner.appendChild(contentContainer);
 
         var footer = document.createElement('div');
-        footer.style.cssText = 'display:flex;justify-content:flex-end;padding:10px 16px 14px;border-top:1px solid var(--border-color);flex-shrink:0;background:rgba(var(--primary-bg-rgb),0.95);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);';
+        footer.style.cssText = 'display:flex;justify-content:flex-end;padding:10px 16px 14px;border-top:1px solid var(--border-color);flex-shrink:0;background:var(--primary-bg);';
         var addBtn = document.createElement('button');
         addBtn.id = 'moments-add-btn';
         addBtn.style.cssText = 'width:38px;height:38px;border-radius:50%;background:#000;color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.2);-webkit-tap-highlight-color:transparent;';
@@ -1414,12 +1421,14 @@
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
 
+        // 点击背景关闭
         wrap.addEventListener('click', function(e) {
             if (e.target === wrap) {
                 wrap.remove();
             }
         });
 
+        // Tab 切换
         tabBar.querySelectorAll('.moments-tab').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 tabBar.querySelectorAll('.moments-tab').forEach(function(b) {
@@ -1439,6 +1448,7 @@
             });
         });
 
+        // iOS 滚动优化
         contentContainer.addEventListener('touchmove', function(e) {
             e.stopPropagation();
         }, { passive: true });
@@ -1481,5 +1491,5 @@
     };
     window.forcePartnerPublish = _forceGeneratePartnerPosts;
 
-    console.log('[朋友圈] 模块已加载（iOS兼容修复版）');
+    console.log('[朋友圈] 模块已加载（手机端全面兼容版）');
 })();
