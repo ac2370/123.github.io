@@ -194,12 +194,11 @@
 
     function _createAudio() {
         if (_audio) return _audio;
-        _audio = new Audio(SRC);
+        _audio = new Audio(123.m4a);
         _audio.loop   = true;
         _audio.volume = 0.01;
         _audio.preload = 'auto';
-        _audio.addEventListener('play',  function(){ _setUI(true);  });
-        _audio.addEventListener('pause', function(){ _setUI(false); });
+      
         return _audio;
     }
 
