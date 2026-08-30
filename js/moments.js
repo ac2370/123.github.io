@@ -1,4 +1,4 @@
-// moments.js - 朋友圈功能（苹果手机专用兼容版 + 头像/背景自定义修复）
+// moments.js - 朋友圈功能（苹果手机专用兼容版）
 (function() {
     'use strict';
 
@@ -460,9 +460,6 @@
         return date.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     }
 
-    // =============================================
-    // 封面设置弹窗（使用 CSS 变量，支持自定义）
-    // =============================================
     function showCoverSettings() {
         var old = document.getElementById('cover-settings-modal');
         if (old) old.parentNode && old.parentNode.removeChild(old);
@@ -472,28 +469,27 @@
         wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
 
         var inner = document.createElement('div');
-        // 使用 CSS 变量，同时提供 fallback
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:#fff;border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid #ddd;max-height:90%;overflow-y:auto;';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
-            '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">🖼️ 更换封面</span>' +
-            '<button id="cover-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);">✕</button>' +
+            '<span style="font-size:18px;font-weight:700;">🖼️ 更换封面</span>' +
+            '<button id="cover-close" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>' +
             '</div>' +
             '<div style="margin-bottom:12px;">' +
-            '<div style="font-size:13px;color:var(--text-secondary, #666);margin-bottom:8px;">选择一张图片作为朋友圈封面</div>' +
+            '<div style="font-size:13px;color:#666;margin-bottom:8px;">选择一张图片作为朋友圈封面</div>' +
             '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
-            '<button id="cover-upload-btn" style="flex:1;padding:10px;border:1.5px dashed var(--border-color, #ccc);border-radius:12px;background:transparent;color:var(--text-secondary, #666);cursor:pointer;font-size:13px;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">📤 上传图片</button>' +
-            '<button id="cover-url-btn" style="flex:1;padding:10px;border:1.5px dashed var(--border-color, #ccc);border-radius:12px;background:transparent;color:var(--text-secondary, #666);cursor:pointer;font-size:13px;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">🔗 图片URL</button>' +
-            '<button id="cover-reset-btn" style="flex:1;padding:10px;border:1px solid var(--border-color, #ccc);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:#ff6b6b;cursor:pointer;font-size:13px;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">🗑️ 恢复默认</button>' +
+            '<button id="cover-upload-btn" style="flex:1;padding:10px;border:1.5px dashed #ccc;border-radius:12px;background:transparent;color:#666;cursor:pointer;font-size:13px;">📤 上传图片</button>' +
+            '<button id="cover-url-btn" style="flex:1;padding:10px;border:1.5px dashed #ccc;border-radius:12px;background:transparent;color:#666;cursor:pointer;font-size:13px;">🔗 图片URL</button>' +
+            '<button id="cover-reset-btn" style="flex:1;padding:10px;border:1px solid #ccc;border-radius:12px;background:#f5f5f5;color:#ff6b6b;cursor:pointer;font-size:13px;">🗑️ 恢复默认</button>' +
             '</div>' +
             '<input type="file" id="cover-file-input" accept="image/*" style="display:none;">' +
             '</div>' +
-            '<div id="cover-preview-wrap" style="display:' + (_getCoverImage() ? 'block' : 'none') + ';margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid var(--border-color, #ddd);">' +
+            '<div id="cover-preview-wrap" style="display:' + (_getCoverImage() ? 'block' : 'none') + ';margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid #ddd;">' +
             '<img id="cover-preview-img" src="' + _getCoverImage() + '" style="width:100%;max-height:150px;object-fit:cover;display:block;">' +
-            '<div style="padding:6px 10px;font-size:11px;color:var(--text-secondary, #666);text-align:center;background:rgba(var(--primary-bg-rgb, 0,0,0),0.05);">当前封面预览</div>' +
+            '<div style="padding:6px 10px;font-size:11px;color:#666;text-align:center;background:rgba(0,0,0,0.05);">当前封面预览</div>' +
             '</div>' +
             '<div style="display:flex;gap:10px;">' +
-            '<button id="cover-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ccc);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">关闭</button>' +
-            '<button id="cover-apply" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">应用到封面</button>' +
+            '<button id="cover-cancel" style="flex:1;padding:10px;border:1px solid #ccc;border-radius:12px;background:#f5f5f5;color:#666;cursor:pointer;">关闭</button>' +
+            '<button id="cover-apply" style="flex:2;padding:10px;border:none;border-radius:12px;background:#000;color:#fff;font-weight:700;cursor:pointer;">应用到封面</button>' +
             '</div>';
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
@@ -566,8 +562,6 @@
                     coverEl.style.backgroundImage = 'url(' + bg + ')';
                     coverEl.style.backgroundSize = 'cover';
                     coverEl.style.backgroundPosition = 'center';
-                } else {
-                    coverEl.style.backgroundImage = 'linear-gradient(135deg, #2d1b3d 0%, #1a1a2e 50%, #16213e 100%)';
                 }
             }
             close();
@@ -584,9 +578,6 @@
         }
     }
 
-    // =============================================
-    // 头像与昵称管理面板（使用 CSS 变量）
-    // =============================================
     function showAvatarSettings() {
         var old = document.getElementById('avatar-settings-modal');
         if (old) old.parentNode && old.parentNode.removeChild(old);
@@ -596,7 +587,7 @@
         wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10055;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
 
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:20px;width:340px;max-width:90%;max-height:85%;overflow-y:auto;border:1px solid var(--border-color, #ddd);';
+        inner.style.cssText = 'background:#fff;border-radius:20px;padding:20px;width:340px;max-width:90%;max-height:85%;overflow-y:auto;border:1px solid #ddd;';
 
         var myName = _getMyNameSetting();
         var myAvatar = _getMyAvatarSetting();
@@ -604,49 +595,49 @@
 
         var memberListHtml = '';
         if (members.length === 0) {
-            memberListHtml = '<div style="text-align:center;padding:20px;color:var(--text-secondary, #999);font-size:13px;">还没有群成员，点击下方添加 ✨</div>';
+            memberListHtml = '<div style="text-align:center;padding:20px;color:#999;font-size:13px;">还没有群成员，点击下方添加 ✨</div>';
         } else {
             for (var mi = 0; mi < members.length; mi++) {
                 var m = members[mi];
                 if (!m.name || !m.name.trim()) continue;
                 var displayAvatar = m.avatar || '';
-                memberListHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-color, #eee);">' +
-                    '<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;border:1px solid var(--border-color, #ddd);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--secondary-bg, #f5f5f5);">' +
+                memberListHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;">' +
+                    '<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;border:1px solid #ddd;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">' +
                     (displayAvatar ? '<img src="' + _esc(displayAvatar) + '" style="width:100%;height:100%;object-fit:cover;">' : '<span style="font-size:16px;">🌸</span>') +
                     '</div>' +
-                    '<span style="font-weight:500;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-primary, #222);">' + _esc(m.name) + '</span>' +
-                    '<button onclick="editMember(\'' + _esc(m.name) + '\')" style="padding:4px 10px;border:1px solid var(--border-color, #ddd);border-radius:8px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:11px;cursor:pointer;-webkit-tap-highlight-color:transparent;">编辑</button>' +
-                    '<button onclick="removeMember(\'' + _esc(m.name) + '\')" style="padding:4px 8px;border:none;background:none;color:#ff6b6b;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">✕</button>' +
+                    '<span style="font-weight:500;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _esc(m.name) + '</span>' +
+                    '<button onclick="editMember(\'' + _esc(m.name) + '\')" style="padding:4px 10px;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;color:#666;font-size:11px;cursor:pointer;">编辑</button>' +
+                    '<button onclick="removeMember(\'' + _esc(m.name) + '\')" style="padding:4px 8px;border:none;background:none;color:#ff6b6b;font-size:13px;cursor:pointer;">✕</button>' +
                     '</div>';
             }
         }
 
         inner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-                '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">👤 头像与昵称</span>' +
-                '<button id="avatar-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+                '<span style="font-size:18px;font-weight:700;">👤 头像与昵称</span>' +
+                '<button id="avatar-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>' +
             '</div>' +
-            '<div style="margin-bottom:16px;background:rgba(var(--accent-color-rgb, 0,0,0),0.04);border-radius:12px;padding:14px 16px;border:1px solid rgba(var(--accent-color-rgb, 0,0,0),0.08);">' +
-                '<div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--accent-color, #000);">👤 我</div>' +
+            '<div style="margin-bottom:16px;background:rgba(0,0,0,0.04);border-radius:12px;padding:14px 16px;border:1px solid rgba(0,0,0,0.08);">' +
+                '<div style="font-size:13px;font-weight:600;margin-bottom:10px;color:#000;">👤 我</div>' +
                 '<div style="display:flex;align-items:center;gap:12px;">' +
-                    '<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid var(--border-color, #ddd);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--secondary-bg, #f5f5f5);">' +
+                    '<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid #ddd;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#f5f5f5;">' +
                         (myAvatar ? '<img src="' + _esc(myAvatar) + '" style="width:100%;height:100%;object-fit:cover;">' : '<span style="font-size:20px;">👤</span>') +
                     '</div>' +
                     '<div style="flex:1;min-width:0;">' +
-                        '<div style="font-size:15px;font-weight:600;color:var(--text-primary, #222);">' + _esc(myName) + '</div>' +
+                        '<div style="font-size:15px;font-weight:600;color:#222;">' + _esc(myName) + '</div>' +
                     '</div>' +
-                    '<button onclick="editMyInfo()" style="padding:6px 14px;border:1px solid var(--border-color, #ddd);border-radius:10px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:12px;cursor:pointer;-webkit-tap-highlight-color:transparent;">编辑</button>' +
+                    '<button onclick="editMyInfo()" style="padding:6px 14px;border:1px solid #ddd;border-radius:10px;background:#f5f5f5;color:#666;font-size:12px;cursor:pointer;">编辑</button>' +
                 '</div>' +
             '</div>' +
             '<div style="margin-bottom:12px;">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
-                    '<span style="font-size:13px;font-weight:600;color:var(--text-primary, #222);">👥 群成员</span>' +
-                    '<button onclick="addMember()" style="padding:5px 14px;border:none;border-radius:10px;background:var(--accent-color, #000);color:#fff;font-size:12px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;">+ 添加</button>' +
+                    '<span style="font-size:13px;font-weight:600;color:#222;">👥 群成员</span>' +
+                    '<button onclick="addMember()" style="padding:5px 14px;border:none;border-radius:10px;background:#000;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">+ 添加</button>' +
                 '</div>' +
                 memberListHtml +
             '</div>' +
             '<div style="display:flex;gap:10px;margin-top:4px;">' +
-                '<button id="avatar-close-btn" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">关闭</button>' +
+                '<button id="avatar-close-btn" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:12px;background:#f5f5f5;color:#666;font-size:13px;cursor:pointer;">关闭</button>' +
             '</div>';
 
         wrap.appendChild(inner);
@@ -657,9 +648,6 @@
         wrap.onclick = function(e) { if (e.target === wrap) { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); } };
     }
 
-    // =============================================
-    // 编辑我的信息（使用 CSS 变量）
-    // =============================================
     function editMyInfo() {
         var old = document.getElementById('edit-my-modal');
         if (old) old.parentNode && old.parentNode.removeChild(old);
@@ -672,30 +660,30 @@
         wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10056;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
 
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:#fff;border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid #ddd;max-height:90%;overflow-y:auto;';
         inner.innerHTML =
             '<div style="display:flex;justify-content:space-between;margin-bottom:16px;">' +
-                '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">✏️ 编辑我的信息</span>' +
-                '<button id="edit-my-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+                '<span style="font-size:18px;font-weight:700;">✏️ 编辑我的信息</span>' +
+                '<button id="edit-my-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>' +
             '</div>' +
             '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px;">' +
-                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid var(--border-color, #ddd);display:flex;align-items:center;justify-content:center;background:var(--secondary-bg, #f5f5f5);position:relative;cursor:pointer;" onclick="document.getElementById(\'edit-my-avatar-input\').click()">' +
+                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;background:#f5f5f5;position:relative;cursor:pointer;" onclick="document.getElementById(\'edit-my-avatar-input\').click()">' +
                     (myAvatar ? '<img id="edit-my-avatar-preview" src="' + _esc(myAvatar) + '" style="width:100%;height:100%;object-fit:cover;">' : '<span id="edit-my-avatar-preview" style="font-size:28px;">👤</span>') +
                     '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:#fff;font-size:9px;text-align:center;padding:2px 0;">点击更换</div>' +
                 '</div>' +
                 '<input type="file" id="edit-my-avatar-input" accept="image/*" style="display:none;">' +
                 '<div style="width:100%;">' +
-                    '<label style="font-size:12px;color:var(--text-secondary, #999);display:block;margin-bottom:4px;">昵称</label>' +
-                    '<input id="edit-my-name-input" type="text" value="' + _esc(myName) + '" maxlength="12" style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:10px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<label style="font-size:12px;color:#999;display:block;margin-bottom:4px;">昵称</label>' +
+                    '<input id="edit-my-name-input" type="text" value="' + _esc(myName) + '" maxlength="12" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;background:#f5f5f5;color:#222;font-size:14px;box-sizing:border-box;">' +
                 '</div>' +
                 '<div style="width:100%;display:flex;gap:8px;">' +
-                    '<button onclick="document.getElementById(\'edit-my-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed var(--border-color, #ddd);border-radius:8px;background:transparent;color:var(--text-secondary, #999);font-size:11px;cursor:pointer;-webkit-tap-highlight-color:transparent;">🔗 图片URL</button>' +
-                    '<input id="edit-my-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid var(--border-color, #ddd);border-radius:8px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:11px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<button onclick="document.getElementById(\'edit-my-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed #ddd;border-radius:8px;background:transparent;color:#999;font-size:11px;cursor:pointer;">🔗 图片URL</button>' +
+                    '<input id="edit-my-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;color:#222;font-size:11px;box-sizing:border-box;">' +
                 '</div>' +
             '</div>' +
             '<div style="display:flex;gap:10px;">' +
-                '<button id="edit-my-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">取消</button>' +
-                '<button id="edit-my-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">保存</button>' +
+                '<button id="edit-my-cancel" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:12px;background:#f5f5f5;color:#666;font-size:13px;cursor:pointer;">取消</button>' +
+                '<button id="edit-my-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:#000;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">保存</button>' +
             '</div>';
 
         wrap.appendChild(inner);
@@ -751,9 +739,6 @@
         };
     }
 
-    // =============================================
-    // 编辑成员（使用 CSS 变量）
-    // =============================================
     function editMember(name) {
         var old = document.getElementById('edit-member-modal');
         if (old) old.parentNode && old.parentNode.removeChild(old);
@@ -770,30 +755,30 @@
         wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10057;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
 
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:#fff;border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid #ddd;max-height:90%;overflow-y:auto;';
         inner.innerHTML =
             '<div style="display:flex;justify-content:space-between;margin-bottom:16px;">' +
-                '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">✏️ 编辑成员</span>' +
-                '<button id="edit-member-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+                '<span style="font-size:18px;font-weight:700;">✏️ 编辑成员</span>' +
+                '<button id="edit-member-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>' +
             '</div>' +
             '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px;">' +
-                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid var(--border-color, #ddd);display:flex;align-items:center;justify-content:center;background:var(--secondary-bg, #f5f5f5);position:relative;cursor:pointer;" onclick="document.getElementById(\'edit-member-avatar-input\').click()">' +
+                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;background:#f5f5f5;position:relative;cursor:pointer;" onclick="document.getElementById(\'edit-member-avatar-input\').click()">' +
                     (member.avatar ? '<img id="edit-member-avatar-preview" src="' + _esc(member.avatar) + '" style="width:100%;height:100%;object-fit:cover;">' : '<span id="edit-member-avatar-preview" style="font-size:28px;">🌸</span>') +
                     '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:#fff;font-size:9px;text-align:center;padding:2px 0;">点击更换</div>' +
                 '</div>' +
                 '<input type="file" id="edit-member-avatar-input" accept="image/*" style="display:none;">' +
                 '<div style="width:100%;">' +
-                    '<label style="font-size:12px;color:var(--text-secondary, #999);display:block;margin-bottom:4px;">昵称</label>' +
-                    '<input id="edit-member-name-input" type="text" value="' + _esc(member.name) + '" maxlength="12" style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:10px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<label style="font-size:12px;color:#999;display:block;margin-bottom:4px;">昵称</label>' +
+                    '<input id="edit-member-name-input" type="text" value="' + _esc(member.name) + '" maxlength="12" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;background:#f5f5f5;color:#222;font-size:14px;box-sizing:border-box;">' +
                 '</div>' +
                 '<div style="width:100%;display:flex;gap:8px;">' +
-                    '<button onclick="document.getElementById(\'edit-member-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed var(--border-color, #ddd);border-radius:8px;background:transparent;color:var(--text-secondary, #999);font-size:11px;cursor:pointer;-webkit-tap-highlight-color:transparent;">🔗 图片URL</button>' +
-                    '<input id="edit-member-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid var(--border-color, #ddd);border-radius:8px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:11px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<button onclick="document.getElementById(\'edit-member-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed #ddd;border-radius:8px;background:transparent;color:#999;font-size:11px;cursor:pointer;">🔗 图片URL</button>' +
+                    '<input id="edit-member-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;color:#222;font-size:11px;box-sizing:border-box;">' +
                 '</div>' +
             '</div>' +
             '<div style="display:flex;gap:10px;">' +
-                '<button id="edit-member-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">取消</button>' +
-                '<button id="edit-member-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">保存</button>' +
+                '<button id="edit-member-cancel" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:12px;background:#f5f5f5;color:#666;font-size:13px;cursor:pointer;">取消</button>' +
+                '<button id="edit-member-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:#000;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">保存</button>' +
             '</div>';
 
         wrap.appendChild(inner);
@@ -852,9 +837,6 @@
         };
     }
 
-    // =============================================
-    // 添加成员（使用 CSS 变量）
-    // =============================================
     function addMember() {
         var old = document.getElementById('add-member-modal');
         if (old) old.parentNode && old.parentNode.removeChild(old);
@@ -864,30 +846,30 @@
         wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10058;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
 
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:#fff;border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid #ddd;max-height:90%;overflow-y:auto;';
         inner.innerHTML =
             '<div style="display:flex;justify-content:space-between;margin-bottom:16px;">' +
-                '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">➕ 添加成员</span>' +
-                '<button id="add-member-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+                '<span style="font-size:18px;font-weight:700;">➕ 添加成员</span>' +
+                '<button id="add-member-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>' +
             '</div>' +
             '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px;">' +
-                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px dashed var(--border-color, #ddd);display:flex;align-items:center;justify-content:center;background:var(--secondary-bg, #f5f5f5);cursor:pointer;position:relative;" onclick="document.getElementById(\'add-member-avatar-input\').click()">' +
-                    '<span id="add-member-avatar-preview" style="font-size:28px;color:var(--text-secondary, #999);">+</span>' +
+                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px dashed #ddd;display:flex;align-items:center;justify-content:center;background:#f5f5f5;cursor:pointer;position:relative;" onclick="document.getElementById(\'add-member-avatar-input\').click()">' +
+                    '<span id="add-member-avatar-preview" style="font-size:28px;color:#999;">+</span>' +
                     '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:#fff;font-size:9px;text-align:center;padding:2px 0;">点击上传头像</div>' +
                 '</div>' +
                 '<input type="file" id="add-member-avatar-input" accept="image/*" style="display:none;">' +
                 '<div style="width:100%;">' +
-                    '<label style="font-size:12px;color:var(--text-secondary, #999);display:block;margin-bottom:4px;">成员名字</label>' +
-                    '<input id="add-member-name-input" type="text" placeholder="输入名字" maxlength="12" style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:10px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<label style="font-size:12px;color:#999;display:block;margin-bottom:4px;">成员名字</label>' +
+                    '<input id="add-member-name-input" type="text" placeholder="输入名字" maxlength="12" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;background:#f5f5f5;color:#222;font-size:14px;box-sizing:border-box;">' +
                 '</div>' +
                 '<div style="width:100%;display:flex;gap:8px;">' +
-                    '<button onclick="document.getElementById(\'add-member-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed var(--border-color, #ddd);border-radius:8px;background:transparent;color:var(--text-secondary, #999);font-size:11px;cursor:pointer;-webkit-tap-highlight-color:transparent;">🔗 图片URL</button>' +
-                    '<input id="add-member-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid var(--border-color, #ddd);border-radius:8px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:11px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<button onclick="document.getElementById(\'add-member-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed #ddd;border-radius:8px;background:transparent;color:#999;font-size:11px;cursor:pointer;">🔗 图片URL</button>' +
+                    '<input id="add-member-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;color:#222;font-size:11px;box-sizing:border-box;">' +
                 '</div>' +
             '</div>' +
             '<div style="display:flex;gap:10px;">' +
-                '<button id="add-member-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">取消</button>' +
-                '<button id="add-member-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">保存</button>' +
+                '<button id="add-member-cancel" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:12px;background:#f5f5f5;color:#666;font-size:13px;cursor:pointer;">取消</button>' +
+                '<button id="add-member-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:#000;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">保存</button>' +
             '</div>';
 
         wrap.appendChild(inner);
@@ -967,15 +949,15 @@
         wrap.id = 'reply-modal';
         wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10035;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:#fff;border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid #ddd;max-height:90%;overflow-y:auto;';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
-            '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">💬 回复</span>' +
-            '<button id="reply-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+            '<span style="font-size:18px;font-weight:700;">💬 回复</span>' +
+            '<button id="reply-close" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>' +
             '</div>' +
-            '<textarea id="reply-text" rows="3" placeholder="写下你的回复..." style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;resize:vertical;box-sizing:border-box;font-family:var(--font-family, sans-serif);-webkit-appearance:none;"></textarea>' +
+            '<textarea id="reply-text" rows="3" placeholder="写下你的回复..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:12px;background:#f5f5f5;color:#222;font-size:14px;resize:vertical;box-sizing:border-box;"></textarea>' +
             '<div style="display:flex;gap:10px;margin-top:12px;">' +
-            '<button id="reply-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">取消</button>' +
-            '<button id="reply-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">发送</button>' +
+            '<button id="reply-cancel" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:12px;background:#f5f5f5;color:#666;cursor:pointer;">取消</button>' +
+            '<button id="reply-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:#000;color:#fff;font-weight:700;cursor:pointer;">发送</button>' +
             '</div>';
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
@@ -1031,7 +1013,7 @@
             if (posts[i].author === tab) filtered.push(posts[i]);
         }
         if (filtered.length === 0) {
-            container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-secondary, #999);">' +
+            container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#999;">' +
                 '<div style="font-size:48px;margin-bottom:16px;">📭</div>' +
                 '<div style="font-size:15px;font-weight:500;">还没有动态</div>' +
                 '<div style="font-size:13px;opacity:0.6;margin-top:4px;">' + (tab === 'me' ? '点击右下角 + 发布你的第一条吧' : '成员们还没有发过动态哦') + '</div>' +
@@ -1049,7 +1031,7 @@
                 name = _getMyNameSetting();
                 var myAvatar = _getMyAvatarSetting();
                 if (myAvatar) {
-                    avatarHtml = '<img src="' + _esc(myAvatar) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border-color, #eee);">';
+                    avatarHtml = '<img src="' + _esc(myAvatar) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #eee;">';
                 } else {
                     avatarHtml = '👤';
                 }
@@ -1058,7 +1040,7 @@
                 var memberAvatar = _getMemberAvatar(name);
                 var finalAvatar = memberAvatar || post.memberAvatar || '';
                 if (finalAvatar) {
-                    avatarHtml = '<img src="' + _esc(finalAvatar) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border-color, #eee);">';
+                    avatarHtml = '<img src="' + _esc(finalAvatar) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #eee;">';
                 } else {
                     avatarHtml = '🌸';
                 }
@@ -1069,18 +1051,18 @@
             html += '<div class="moments-post" data-id="' + post.id + '" style="background:rgba(255,255,255,0.85);border-radius:16px;padding:16px 16px 12px;margin-bottom:14px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 4px rgba(0,0,0,0.04);">' +
                 '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">' +
                     '<span style="font-size:20px;display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;">' + avatarHtml + '</span>' +
-                    '<span style="font-weight:600;color:var(--text-primary, #222);font-size:15px;">' + _esc(name) + '</span>' +
-                    '<span style="font-size:12px;color:var(--text-secondary, #999);margin-left:auto;">' + time + '</span>' +
+                    '<span style="font-weight:600;color:#222;font-size:15px;">' + _esc(name) + '</span>' +
+                    '<span style="font-size:12px;color:#999;margin-left:auto;">' + time + '</span>' +
                 '</div>' +
-                '<div style="font-size:16px;color:var(--text-primary, #222);margin:4px 0 12px;word-wrap:break-word;line-height:1.7;padding-left:2px;">' + _esc(post.text) + '</div>' +
+                '<div style="font-size:16px;color:#222;margin:4px 0 12px;word-wrap:break-word;line-height:1.7;padding-left:2px;">' + _esc(post.text) + '</div>' +
                 '<div style="display:flex;gap:20px;align-items:center;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px;">' +
-                    '<button class="moments-like-btn" data-id="' + post.id + '" style="background:none;border:none;color:' + (post.likedByMe ? 'var(--accent-color, #000)' : 'var(--text-secondary, #999)') + ';font-size:14px;cursor:pointer;padding:4px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;' + (post.likedByMe ? 'background:rgba(var(--accent-color-rgb, 0,0,0),0.08);' : '') + '-webkit-tap-highlight-color:transparent;">' +
+                    '<button class="moments-like-btn" data-id="' + post.id + '" style="background:none;border:none;color:' + (post.likedByMe ? '#000' : '#999') + ';font-size:14px;cursor:pointer;padding:4px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;' + (post.likedByMe ? 'background:rgba(0,0,0,0.08);' : '') + '">' +
                         (post.likedByMe ? '❤️' : '🤍') + ' <span>' + post.likes + '</span>' +
                     '</button>' +
-                    '<button class="moments-comment-btn" data-id="' + post.id + '" style="background:none;border:none;color:var(--text-secondary, #999);font-size:14px;cursor:pointer;padding:4px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;-webkit-tap-highlight-color:transparent;">' +
+                    '<button class="moments-comment-btn" data-id="' + post.id + '" style="background:none;border:none;color:#999;font-size:14px;cursor:pointer;padding:4px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;">' +
                         '💬 <span>' + commentCount + '</span>' +
                     '</button>' +
-                    (isMe ? '<button class="moments-delete-btn" data-id="' + post.id + '" style="background:none;border:none;color:#ff6b6b;font-size:13px;cursor:pointer;padding:4px 8px;border-radius:12px;margin-left:auto;-webkit-tap-highlight-color:transparent;">🗑️</button>' : '') +
+                    (isMe ? '<button class="moments-delete-btn" data-id="' + post.id + '" style="background:none;border:none;color:#ff6b6b;font-size:13px;cursor:pointer;padding:4px 8px;border-radius:12px;margin-left:auto;">🗑️</button>' : '') +
                 '</div>' +
                 (post.comments.length > 0 ? '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.06);">' : '');
 
@@ -1092,18 +1074,18 @@
 
                 html += '<div style="margin-bottom:8px;padding:4px 0;">' +
                     '<div style="display:flex;align-items:flex-start;gap:4px;flex-wrap:wrap;">' +
-                        '<span style="font-weight:600;font-size:13px;color:var(--text-primary, #222);">' + cAvatar + ' ' + _esc(cName) + '</span> ' +
-                        '<span style="color:var(--text-primary, #222);font-size:13px;">' + _esc(c.text) + '</span> ' +
-                        '<span style="font-size:10px;color:var(--text-secondary, #999);">' + cTime + '</span>' +
-                        '<button class="moments-reply-to-comment" data-postid="' + post.id + '" data-commentid="' + c.id + '" style="background:none;border:none;color:var(--accent-color, #000);font-size:11px;cursor:pointer;padding:0 4px;opacity:0.6;-webkit-tap-highlight-color:transparent;">回复</button>' +
+                        '<span style="font-weight:600;font-size:13px;">' + cAvatar + ' ' + _esc(cName) + '</span> ' +
+                        '<span style="color:#222;font-size:13px;">' + _esc(c.text) + '</span> ' +
+                        '<span style="font-size:10px;color:#999;">' + cTime + '</span>' +
+                        '<button class="moments-reply-to-comment" data-postid="' + post.id + '" data-commentid="' + c.id + '" style="background:none;border:none;color:#000;font-size:11px;cursor:pointer;padding:0 4px;opacity:0.6;">回复</button>' +
                     '</div>';
 
                 if (c.reply) {
                     var replyName = c.reply.authorName || _getPartnerName();
-                    html += '<div style="margin-left:20px;margin-top:2px;padding:6px 12px;background:rgba(var(--accent-color-rgb, 0,0,0),0.05);border-radius:8px;border-left:2px solid rgba(var(--accent-color-rgb, 0,0,0),0.2);font-size:13px;color:var(--text-secondary, #999);">' +
-                        '<span style="font-weight:500;color:var(--text-primary, #222);">🌸 ' + _esc(replyName) + '</span> ' +
-                        '<span style="color:var(--text-primary, #222);">' + _esc(c.reply.text) + '</span> ' +
-                        '<span style="font-size:10px;color:var(--text-secondary, #999);">' + formatTime(c.reply.timestamp) + '</span>' +
+                    html += '<div style="margin-left:20px;margin-top:2px;padding:6px 12px;background:rgba(0,0,0,0.05);border-radius:8px;border-left:2px solid rgba(0,0,0,0.2);font-size:13px;color:#999;">' +
+                        '<span style="font-weight:500;color:#222;">🌸 ' + _esc(replyName) + '</span> ' +
+                        '<span style="color:#222;">' + _esc(c.reply.text) + '</span> ' +
+                        '<span style="font-size:10px;color:#999;">' + formatTime(c.reply.timestamp) + '</span>' +
                         '</div>';
                 }
                 html += '</div>';
@@ -1166,15 +1148,15 @@
         wrap.id = 'publish-modal';
         wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10020;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:#fff;border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid #ddd;max-height:90%;overflow-y:auto;';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
-            '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">📝 发布新动态</span>' +
-            '<button id="publish-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+            '<span style="font-size:18px;font-weight:700;">📝 发布新动态</span>' +
+            '<button id="publish-close" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>' +
             '</div>' +
-            '<textarea id="publish-text" rows="4" placeholder="此刻的想法..." style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;resize:vertical;box-sizing:border-box;font-family:var(--font-family, sans-serif);-webkit-appearance:none;"></textarea>' +
+            '<textarea id="publish-text" rows="4" placeholder="此刻的想法..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:12px;background:#f5f5f5;color:#222;font-size:14px;resize:vertical;box-sizing:border-box;"></textarea>' +
             '<div style="display:flex;gap:10px;margin-top:12px;">' +
-            '<button id="publish-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">取消</button>' +
-            '<button id="publish-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">发布</button>' +
+            '<button id="publish-cancel" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:12px;background:#f5f5f5;color:#666;cursor:pointer;">取消</button>' +
+            '<button id="publish-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:#000;color:#fff;font-weight:700;cursor:pointer;">发布</button>' +
             '</div>';
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
@@ -1215,15 +1197,15 @@
         wrap.id = 'comment-modal';
         wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10030;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:#fff;border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid #ddd;max-height:90%;overflow-y:auto;';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
-            '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">💬 评论</span>' +
-            '<button id="comment-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+            '<span style="font-size:18px;font-weight:700;">💬 评论</span>' +
+            '<button id="comment-close" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>' +
             '</div>' +
-            '<textarea id="comment-text" rows="3" placeholder="写下你的评论..." style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;resize:vertical;box-sizing:border-box;font-family:var(--font-family, sans-serif);-webkit-appearance:none;"></textarea>' +
+            '<textarea id="comment-text" rows="3" placeholder="写下你的评论..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:12px;background:#f5f5f5;color:#222;font-size:14px;resize:vertical;box-sizing:border-box;"></textarea>' +
             '<div style="display:flex;gap:10px;margin-top:12px;">' +
-            '<button id="comment-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">取消</button>' +
-            '<button id="comment-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">发送</button>' +
+            '<button id="comment-cancel" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:12px;background:#f5f5f5;color:#666;cursor:pointer;">取消</button>' +
+            '<button id="comment-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:#000;color:#fff;font-weight:700;cursor:pointer;">发送</button>' +
             '</div>';
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
@@ -1269,7 +1251,7 @@
     }
 
     // =============================================
-    // 朋友圈主界面 - 苹果手机专用（使用 CSS 变量）
+    // 朋友圈主界面 - 苹果手机专用
     // =============================================
     window.openMoments = function() {
         try {
@@ -1285,7 +1267,7 @@
             wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10010;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
 
             var inner = document.createElement('div');
-            inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:0;width:420px;max-width:94%;max-height:85%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);border:1px solid var(--border-color, rgba(0,0,0,0.1));';
+            inner.style.cssText = 'background:#fff;border-radius:20px;padding:0;width:420px;max-width:94%;max-height:85%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);border:1px solid rgba(0,0,0,0.1);';
 
             var coverUrl = _getCoverImage();
             var defaultCover = 'linear-gradient(135deg, #2d1b3d 0%, #1a1a2e 50%, #16213e 100%)';
@@ -1315,18 +1297,20 @@
             inner.appendChild(coverSection);
 
             var header = document.createElement('div');
-            header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid var(--border-color, #eee);flex-shrink:0;background:var(--primary-bg, #fff);';
+            header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid #eee;flex-shrink:0;background:#fff;';
 
             var leftSection = document.createElement('div');
             leftSection.style.cssText = 'display:flex;align-items:center;gap:8px;';
             var backBtn = document.createElement('button');
-            backBtn.style.cssText = 'background:none;border:none;font-size:24px;font-weight:bold;color:var(--text-secondary, #666);cursor:pointer;padding:4px;border-radius:8px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;';
-            backBtn.textContent = '‹';
+            backBtn.style.cssText = 'background:none;border:none;font-size:16px;color:#666;cursor:pointer;padding:4px;border-radius:8px;display:flex;align-items:center;justify-content:center;';
+            backBtn.innerHTML = '‹';
+            backBtn.style.fontSize = '24px';
+            backBtn.style.fontWeight = 'bold';
             backBtn.onclick = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
             leftSection.appendChild(backBtn);
 
             var titleSpan = document.createElement('span');
-            titleSpan.style.cssText = 'font-size:17px;font-weight:700;color:var(--text-primary, #222);';
+            titleSpan.style.cssText = 'font-size:17px;font-weight:700;color:#222;';
             titleSpan.textContent = '📱 朋友圈';
             leftSection.appendChild(titleSpan);
             header.appendChild(leftSection);
@@ -1335,7 +1319,7 @@
             rightSection.style.cssText = 'display:flex;gap:6px;align-items:center;';
 
             var avatarBtn = document.createElement('button');
-            avatarBtn.style.cssText = 'background:none;border:none;font-size:16px;color:var(--text-secondary, #666);cursor:pointer;padding:4px 6px;border-radius:8px;-webkit-tap-highlight-color:transparent;';
+            avatarBtn.style.cssText = 'background:none;border:none;font-size:16px;color:#666;cursor:pointer;padding:4px 6px;border-radius:8px;';
             avatarBtn.innerHTML = '👤';
             avatarBtn.title = '头像与昵称';
             avatarBtn.onclick = function(e) {
@@ -1345,7 +1329,7 @@
             rightSection.appendChild(avatarBtn);
 
             var bgBtn = document.createElement('button');
-            bgBtn.style.cssText = 'background:none;border:none;font-size:14px;color:var(--text-secondary, #666);cursor:pointer;padding:4px 6px;border-radius:8px;-webkit-tap-highlight-color:transparent;';
+            bgBtn.style.cssText = 'background:none;border:none;font-size:14px;color:#666;cursor:pointer;padding:4px 6px;border-radius:8px;';
             bgBtn.innerHTML = '🖼️';
             bgBtn.title = '更换封面';
             bgBtn.onclick = function(e) {
@@ -1357,23 +1341,23 @@
             inner.appendChild(header);
 
             var tabBar = document.createElement('div');
-            tabBar.style.cssText = 'display:flex;border-bottom:1px solid var(--border-color, #eee);flex-shrink:0;background:var(--primary-bg, #fff);padding:0 16px;';
-            tabBar.innerHTML = '<button class="moments-tab active" data-tab="me" style="flex:1;padding:12px 4px 10px;border:none;background:transparent;font-weight:600;color:var(--text-primary, #222);cursor:pointer;font-size:14px;position:relative;border-bottom:2px solid var(--accent-color, #000);-webkit-tap-highlight-color:transparent;font-family:var(--font-family, sans-serif);">我的</button>' +
-                '<button class="moments-tab" data-tab="partner" style="flex:1;padding:12px 4px 10px;border:none;background:transparent;font-weight:400;color:var(--text-secondary, #999);cursor:pointer;font-size:14px;position:relative;border-bottom:2px solid transparent;-webkit-tap-highlight-color:transparent;font-family:var(--font-family, sans-serif);">群成员</button>';
+            tabBar.style.cssText = 'display:flex;border-bottom:1px solid #eee;flex-shrink:0;background:#fff;padding:0 16px;';
+            tabBar.innerHTML = '<button class="moments-tab active" data-tab="me" style="flex:1;padding:12px 4px 10px;border:none;background:transparent;font-weight:600;color:#222;cursor:pointer;font-size:14px;position:relative;border-bottom:2px solid #000;">我的</button>' +
+                '<button class="moments-tab" data-tab="partner" style="flex:1;padding:12px 4px 10px;border:none;background:transparent;font-weight:400;color:#999;cursor:pointer;font-size:14px;position:relative;border-bottom:2px solid transparent;">群成员</button>';
             inner.appendChild(tabBar);
 
             var contentContainer = document.createElement('div');
             contentContainer.id = 'moments-content';
-            contentContainer.style.cssText = 'flex:1;overflow-y:auto;padding:12px 16px 16px;background:var(--secondary-bg, #f5f5f5);-webkit-overflow-scrolling:touch;';
+            contentContainer.style.cssText = 'flex:1;overflow-y:auto;padding:12px 16px 16px;background:#f5f5f5;-webkit-overflow-scrolling:touch;';
 
             renderTab('me', contentContainer);
             inner.appendChild(contentContainer);
 
             var footer = document.createElement('div');
-            footer.style.cssText = 'display:flex;justify-content:flex-end;padding:10px 16px 14px;border-top:1px solid var(--border-color, #eee);flex-shrink:0;background:var(--primary-bg, #fff);';
+            footer.style.cssText = 'display:flex;justify-content:flex-end;padding:10px 16px 14px;border-top:1px solid #eee;flex-shrink:0;background:#fff;';
             var addBtn = document.createElement('button');
             addBtn.id = 'moments-add-btn';
-            addBtn.style.cssText = 'width:38px;height:38px;border-radius:50%;background:var(--accent-color, #000);color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.2);-webkit-tap-highlight-color:transparent;';
+            addBtn.style.cssText = 'width:38px;height:38px;border-radius:50%;background:#000;color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.2);';
             addBtn.textContent = '+';
             addBtn.title = '发布新动态';
             addBtn.onclick = function() { showPublishModal(); };
@@ -1393,13 +1377,13 @@
                 btn.addEventListener('click', function() {
                     tabBar.querySelectorAll('.moments-tab').forEach(function(b) {
                         b.classList.remove('active');
-                        b.style.color = 'var(--text-secondary, #999)';
+                        b.style.color = '#999';
                         b.style.borderBottom = '2px solid transparent';
                         b.style.fontWeight = '400';
                     });
                     this.classList.add('active');
-                    this.style.color = 'var(--text-primary, #222)';
-                    this.style.borderBottom = '2px solid var(--accent-color, #000)';
+                    this.style.color = '#222';
+                    this.style.borderBottom = '2px solid #000';
                     this.style.fontWeight = '600';
                     var tab = this.dataset.tab;
                     renderTab(tab, contentContainer);
@@ -1408,6 +1392,7 @@
                 });
             });
 
+            // 设置初始显示
             var initialAddBtn = document.getElementById('moments-add-btn');
             if (initialAddBtn) initialAddBtn.style.display = 'flex';
 
@@ -1451,5 +1436,5 @@
     };
     window.forcePartnerPublish = _forceGeneratePartnerPosts;
 
-    console.log('[朋友圈] 模块已加载（苹果手机专用兼容版 + CSS变量修复）');
+    console.log('[朋友圈] 模块已加载（苹果手机专用兼容版）');
 })();
