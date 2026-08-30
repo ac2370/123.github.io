@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>个人中心</title>
+    <!-- 确保没有任何 prefetch/preload 链接 -->
     <style>
         /* ===== 全局重置 ===== */
         * {
@@ -36,7 +37,7 @@
             overflow-x: hidden;
             box-shadow: 0 0 40px rgba(0,0,0,0.3);
             padding: 12px 14px 6px;
-            padding-top: calc(75px + env(safe-area-inset-top, 20px)); /* 卡片整体下移 */
+            padding-top: calc(75px + env(safe-area-inset-top, 20px));
         }
 
         /* ===== 背景层（点击上传） ===== */
@@ -81,10 +82,10 @@
             opacity: 1;
         }
 
-        /* ===== 返回按钮：圆形，无文字 ===== */
+        /* ===== 返回按钮：圆形，使用 history.back() ===== */
         .back-arrow {
             position: fixed;
-            top: calc(22px + env(safe-area-inset-top, 0px)); /* 下移更多 */
+            top: calc(22px + env(safe-area-inset-top, 0px));
             left: 16px;
             z-index: 100;
             width: 44px;
@@ -957,7 +958,7 @@
         .gallery-item:nth-child(3) { --g-rot: -2deg; }
         .gallery-item:nth-child(4) { --g-rot: 5deg; }
 
-        /* ===== ★ 重新添加“背景设置”按钮 ===== */
+        /* ===== ★ 背景设置按钮（文字“背景设置”） ===== */
         .bg-set-btn-wrap {
             display: flex;
             justify-content: center;
@@ -1254,7 +1255,7 @@
     <div class="bg-upload-hint">点击背景上传 · 也可用下方按钮</div>
 </div>
 
-<!-- ===== 返回按钮：圆形，无文字，使用 history.back() ===== -->
+<!-- ===== 返回按钮：圆形，history.back() ===== -->
 <a href="javascript:history.back()" class="back-arrow" title="返回">
     <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
 </a>
@@ -1399,7 +1400,7 @@
             </div>
         </div>
 
-        <!-- ===== ★ 背景设置按钮（文字改为“背景设置”） ===== -->
+        <!-- ===== ★ 背景设置按钮 ===== -->
         <div class="bg-set-btn-wrap">
             <button class="bg-set-btn" id="bgSetBtn">
                 <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -1629,7 +1630,7 @@
             }
         });
 
-        // ★ 点击“背景设置”按钮上传（确保响应）
+        // ★ 点击“背景设置”按钮上传 —— 重新绑定确保触发
         bgSetBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             bgFileInput.click();
@@ -1686,7 +1687,7 @@
             });
         });
 
-        console.log('✅ 个人中心已加载（返回圆形按钮，背景设置已添加）');
+        console.log('✅ 个人中心稳定版加载完成 (返回使用 history.back，背景设置已修复)');
     })();
 </script>
 
