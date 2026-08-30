@@ -22,6 +22,7 @@
             display: flex;
             justify-content: center;
             align-items: flex-start;
+            /* 适配苹果安全区域 */
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
@@ -36,10 +37,11 @@
             overflow-x: hidden;
             box-shadow: 0 0 40px rgba(0,0,0,0.3);
             padding: 12px 14px 16px;
+            /* 顶部留出两行空白（约 50px） */
             padding-top: calc(50px + env(safe-area-inset-top, 20px));
         }
 
-        /* ===== 背景层（点击上传） ===== */
+        /* ===== 自定义背景层（撑满全屏，在最底层） ===== */
         .bg-layer {
             position: fixed;
             top: 0;
@@ -52,6 +54,7 @@
             background-position: center;
             background-repeat: no-repeat;
             transition: background 0.5s ease;
+            /* 允许点击触发上传 */
             pointer-events: auto;
             cursor: pointer;
         }
@@ -60,6 +63,7 @@
             background-position: center;
             background-repeat: no-repeat;
         }
+        /* 背景上的半透明提示（点击上传） */
         .bg-upload-hint {
             position: absolute;
             bottom: 30px;
@@ -81,7 +85,7 @@
             opacity: 1;
         }
 
-        /* ===== 返回箭头 ===== */
+        /* ===== 返回箭头（左上角固定） ===== */
         .back-arrow {
             position: fixed;
             top: calc(12px + env(safe-area-inset-top, 0px));
@@ -121,7 +125,7 @@
             stroke-linejoin: round;
         }
 
-        /* ===== 卡片通用样式 ===== */
+        /* ===== 所有卡片半透明背景 ===== */
         .user-profile-card,
         .core-interaction,
         .play-follow-row,
@@ -132,6 +136,7 @@
             border: 1px solid rgba(255,255,255,0.3);
         }
 
+        /* ===== 页面内容 ===== */
         .profile-page {
             position: relative;
             z-index: 1;
@@ -141,7 +146,7 @@
             padding-bottom: 10px;
         }
 
-        /* ===== 顶部用户卡片 ===== */
+        /* ===== 1. 顶部用户信息卡片 ===== */
         .user-profile-card {
             border-radius: 16px;
             padding: 12px 14px 10px;
@@ -300,7 +305,7 @@
             margin-top: 1px;
         }
 
-        /* ===== 核心互动区 ===== */
+        /* ===== 2. 核心互动与计时区 ===== */
         .core-interaction {
             border-radius: 16px;
             padding: 10px 14px;
@@ -477,7 +482,7 @@
             margin-top: -6px;
         }
 
-        /* ===== 播放行 ===== */
+        /* ===== 3. 播放/跟随行 ===== */
         .play-follow-row {
             border-radius: 16px;
             padding: 10px 14px;
@@ -608,7 +613,7 @@
             transform: scale(0.94);
         }
 
-        /* ===== 动态卡片 ===== */
+        /* ===== 4. 动态/发布卡片 ===== */
         .post-card {
             border-radius: 16px;
             padding: 12px 14px 12px;
@@ -734,6 +739,7 @@
             background: rgba(0,0,0,0.3);
             display: block;
         }
+
         .post-image-area {
             background: rgba(0,0,0,0.04);
             border-radius: 12px;
@@ -891,26 +897,22 @@
             outline: none;
         }
 
-        /* ============================================================
-           5. 底部画廊 —— 四张图片“拉长”版
-           ============================================================ */
+        /* ===== 5. 底部画廊/贴纸区（4张居中） ===== */
         .gallery-scroll {
             display: flex;
-            gap: 14px;               /* 间距增大 */
+            gap: 12px;
             justify-content: center;
             flex-wrap: nowrap;
-            padding: 6px 0 4px;       /* 上下留更多空间 */
+            padding: 4px 0 2px;
             flex-shrink: 0;
         }
         .gallery-scroll::-webkit-scrollbar {
             display: none;
             width: 0;
         }
-
-        /* 关键修改：尺寸从 72px 改为 90px × 85px（宽 × 高），视觉上被拉长 */
         .gallery-item {
-            flex: 0 0 90px;          /* 宽度固定 90px */
-            height: 85px;            /* 高度 85px，略微扁长 */
+            flex: 0 0 72px;
+            height: 72px;
             background: rgba(0,0,0,0.6);
             border-radius: 10px;
             border: 2px solid rgba(255,255,255,0.6);
@@ -957,18 +959,17 @@
         .gallery-item:hover .upload-hint {
             opacity: 1;
         }
-        /* 旋转角度保留 */
         .gallery-item:nth-child(1) { --g-rot: -3deg; }
         .gallery-item:nth-child(2) { --g-rot: 4deg; }
         .gallery-item:nth-child(3) { --g-rot: -2deg; }
         .gallery-item:nth-child(4) { --g-rot: 5deg; }
 
-        /* ===== 隐藏输入 ===== */
+        /* ===== 隐藏的文件输入 ===== */
         .hidden-input {
             display: none;
         }
 
-        /* ===== 日期弹窗 ===== */
+        /* ===== 日期选择器弹窗 ===== */
         .date-modal-overlay {
             position: fixed;
             inset: 0;
@@ -1069,6 +1070,7 @@
             transform: scale(0.96);
         }
 
+        /* ===== 当前纪念日显示 ===== */
         .anniversary-label {
             font-size: 9px;
             color: rgba(0,0,0,0.3);
@@ -1081,7 +1083,7 @@
             color: rgba(0,0,0,0.6);
         }
 
-        /* ===== 响应式适配 ===== */
+        /* ===== 响应式适配苹果 ===== */
         @media (max-width: 480px) {
             .app-wrapper {
                 max-width: 100%;
@@ -1098,11 +1100,6 @@
             .back-arrow svg {
                 width: 16px;
                 height: 16px;
-            }
-            /* 小屏下略微缩小画廊图片，但仍比原来大 */
-            .gallery-item {
-                flex: 0 0 78px;
-                height: 74px;
             }
         }
         @media (max-width: 420px) {
@@ -1126,8 +1123,8 @@
                 height: 32px;
             }
             .gallery-item {
-                flex: 0 0 68px;
-                height: 64px;
+                flex: 0 0 60px;
+                height: 60px;
             }
             .post-image-area {
                 min-height: 60px;
@@ -1178,8 +1175,8 @@
                 min-width: 18px;
             }
             .gallery-item {
-                flex: 0 0 58px;
-                height: 54px;
+                flex: 0 0 52px;
+                height: 52px;
             }
             .post-tag {
                 font-size: 9px;
@@ -1206,22 +1203,24 @@
 </head>
 <body>
 
-<!-- ===== 背景层 ===== -->
+<!-- ===== 背景层（点击可上传自定义图片） ===== -->
 <div class="bg-layer" id="bgLayer">
     <div class="bg-upload-hint">点击此处更换背景</div>
 </div>
 
-<!-- ===== 返回箭头 ===== -->
+<!-- ===== 返回箭头（左上角） ===== -->
 <a href="javascript:history.back()" class="back-arrow" title="返回">
     <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     <span style="font-size:14px;">返回</span>
 </a>
 
-<!-- ===== 主容器 ===== -->
+<!-- ===== 外层容器 ===== -->
 <div class="app-wrapper" id="appWrapper">
+
+    <!-- ===== 个人页内容 ===== -->
     <div class="profile-page" id="profilePage">
 
-        <!-- ===== 顶部用户卡片 ===== -->
+        <!-- ===== 1. 顶部用户信息卡片 ===== -->
         <div class="user-profile-card">
             <div class="profile-left">
                 <div class="avatar-large" id="mainAvatar" data-type="avatar" title="点击更换头像">
@@ -1248,7 +1247,7 @@
             </div>
         </div>
 
-        <!-- ===== 核心互动区 ===== -->
+        <!-- ===== 2. 核心互动与计时区 ===== -->
         <div class="core-interaction">
             <div class="interaction-left">
                 <button class="time-bubble" id="timeBubble">
@@ -1284,7 +1283,7 @@
             </div>
         </div>
 
-        <!-- ===== 播放行 ===== -->
+        <!-- ===== 3. 播放/跟随行 ===== -->
         <div class="play-follow-row">
             <div class="play-left">
                 <div class="play-avatar" data-type="avatar" title="点击更换头像">
@@ -1299,7 +1298,7 @@
             <button class="play-btn" id="playBtn">▶</button>
         </div>
 
-        <!-- ===== 动态卡片 ===== -->
+        <!-- ===== 4. 动态/发布卡片 ===== -->
         <div class="post-card">
             <div class="post-header">
                 <div class="post-user">
@@ -1337,7 +1336,7 @@
             </div>
         </div>
 
-        <!-- ===== 底部画廊（四张拉长图片） ===== -->
+        <!-- ===== 5. 底部画廊/贴纸区（4张居中） ===== -->
         <div class="gallery-scroll" id="galleryScroll">
             <div class="gallery-item" data-type="image" title="点击替换图片">
                 <span style="z-index:1;">🖼️</span>
@@ -1358,13 +1357,14 @@
         </div>
 
     </div><!-- /profile-page -->
+
 </div><!-- /app-wrapper -->
 
-<!-- ===== 隐藏文件输入 ===== -->
+<!-- ===== 隐藏的文件输入（用于图片上传） ===== -->
 <input type="file" class="hidden-input" id="fileInput" accept="image/*">
 <input type="file" class="hidden-input" id="bgFileInput" accept="image/*">
 
-<!-- ===== 日期弹窗 ===== -->
+<!-- ===== 日期选择器弹窗 ===== -->
 <div class="date-modal-overlay" id="dateModal">
     <div class="date-modal-box">
         <div class="date-modal-title">📅 设置纪念日</div>
@@ -1381,7 +1381,9 @@
     (function() {
         'use strict';
 
-        // ===== 图片压缩工具 =====
+        // ============================================================
+        //  工具：图片压缩（canvas）
+        // ============================================================
         function compressImage(file, maxWidth, maxHeight, quality) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -1405,7 +1407,8 @@
                         ctx.imageSmoothingEnabled = true;
                         ctx.imageSmoothingQuality = 'high';
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', quality));
+                        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve(dataUrl);
                     };
                     img.onerror = reject;
                     img.src = e.target.result;
@@ -1415,13 +1418,17 @@
             });
         }
 
+        // 通用图片替换函数（带压缩）
         function setImageToElement(element, file) {
             compressImage(file, 800, 800, 0.8).then(dataUrl => {
+                // 清空元素，添加图片
                 element.innerHTML = '';
                 const img = document.createElement('img');
                 img.src = dataUrl;
                 img.alt = 'uploaded';
                 element.appendChild(img);
+
+                // 如果是 postCenterImage，需要恢复 heart-icon
                 if (element.id === 'postCenterImage') {
                     const heart = document.createElement('span');
                     heart.className = 'heart-icon';
@@ -1445,7 +1452,9 @@
             });
         }
 
-        // ===== 纪念日逻辑 =====
+        // ============================================================
+        //  1. 纪念日逻辑
+        // ============================================================
         const timeBubble = document.getElementById('timeBubble');
         const timeNumber = document.getElementById('timeNumber');
         const anniversaryLabel = document.getElementById('anniversaryLabel');
@@ -1453,6 +1462,7 @@
         const datePicker = document.getElementById('datePicker');
         const dateConfirm = document.getElementById('dateConfirm');
         const dateCancel = document.getElementById('dateCancel');
+
         let anniversaryDate = null;
 
         try {
@@ -1477,7 +1487,9 @@
             const start = new Date(anniversaryDate.getFullYear(), anniversaryDate.getMonth(), anniversaryDate.getDate());
             const diffTime = today.getTime() - start.getTime();
             const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            timeNumber.textContent = days >= 0 ? days : 0;
+            const displayDays = days >= 0 ? days : 0;
+            timeNumber.textContent = displayDays;
+
             const y = anniversaryDate.getFullYear();
             const m = String(anniversaryDate.getMonth() + 1).padStart(2, '0');
             const d = String(anniversaryDate.getDate()).padStart(2, '0');
@@ -1496,27 +1508,43 @@
                 datePicker.value = `${y}-${m}-${d}`;
             } else {
                 const now = new Date();
-                datePicker.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+                const y = now.getFullYear();
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                datePicker.value = `${y}-${m}-${d}`;
             }
             dateModal.classList.add('active');
         });
 
-        dateCancel.addEventListener('click', () => dateModal.classList.remove('active'));
+        function closeDateModal() {
+            dateModal.classList.remove('active');
+        }
+
+        dateCancel.addEventListener('click', closeDateModal);
+
         dateConfirm.addEventListener('click', function() {
             const val = datePicker.value;
-            if (!val) { alert('请选择一个日期'); return; }
+            if (!val) {
+                alert('请选择一个日期');
+                return;
+            }
             const parts = val.split('-');
             const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-            if (isNaN(d.getTime())) { alert('无效日期'); return; }
+            if (isNaN(d.getTime())) {
+                alert('无效日期');
+                return;
+            }
             anniversaryDate = d;
             updateDaysDisplay();
-            dateModal.classList.remove('active');
+            closeDateModal();
             timeBubble.style.transform = 'scale(0.92)';
-            setTimeout(() => timeBubble.style.transform = '', 150);
+            setTimeout(() => { timeBubble.style.transform = ''; }, 150);
         });
+
         dateModal.addEventListener('click', function(e) {
-            if (e.target === this) dateModal.classList.remove('active');
+            if (e.target === this) closeDateModal();
         });
+
         anniversaryLabel.addEventListener('click', function() {
             if (anniversaryDate && confirm('清除纪念日设置？')) {
                 anniversaryDate = null;
@@ -1525,9 +1553,12 @@
             }
         });
 
-        // ===== 图片上传 =====
+        // ============================================================
+        //  2. 图片/头像上传功能（压缩）
+        // ============================================================
         const fileInput = document.getElementById('fileInput');
         let currentTarget = null;
+
         document.querySelectorAll('[data-type="image"], [data-type="avatar"]').forEach(el => {
             el.addEventListener('click', function(e) {
                 if (e.target.closest('.heart-icon')) return;
@@ -1536,11 +1567,14 @@
                 fileInput.click();
             });
         });
+
         document.getElementById('postImageArea').addEventListener('click', function(e) {
             if (e.target.closest('.post-image-center') || e.target.closest('.heart-icon')) return;
             currentTarget = document.getElementById('postCenterImage');
             fileInput.click();
         });
+
+        // 爱心按钮独立
         document.getElementById('heartIcon').addEventListener('click', function(e) {
             e.stopPropagation();
             this.style.transform = 'scale(1.3)';
@@ -1551,25 +1585,35 @@
             }, 300);
             alert('❤️ 已收藏 (演示交互)');
         });
+
         fileInput.addEventListener('change', function() {
             const file = this.files[0];
-            if (!file || !currentTarget) { this.value = ''; return; }
+            if (!file || !currentTarget) {
+                this.value = '';
+                return;
+            }
             setImageToElement(currentTarget, file);
             this.value = '';
             currentTarget = null;
         });
 
-        // ===== 背景上传 =====
+        // ============================================================
+        //  3. 背景自定义（点击背景上传，压缩后撑满）
+        // ============================================================
         const bgLayer = document.getElementById('bgLayer');
         const bgFileInput = document.getElementById('bgFileInput');
+
         bgLayer.addEventListener('click', function(e) {
+            // 避免误触卡片上的点击事件（但卡片在 z-index 上层，不会触发背景点击，不过以防万一）
             if (e.target === this || e.target.closest('.bg-upload-hint')) {
                 bgFileInput.click();
             }
         });
+
         bgFileInput.addEventListener('change', function() {
             const file = this.files[0];
             if (!file) return;
+            // 压缩背景图片（较大尺寸，保证清晰）
             compressImage(file, 1200, 1200, 0.85).then(dataUrl => {
                 bgLayer.style.backgroundImage = `url(${dataUrl})`;
                 bgLayer.style.backgroundSize = 'cover';
@@ -1582,23 +1626,29 @@
             this.value = '';
         });
 
-        // ===== 播放按钮 =====
+        // ============================================================
+        //  4. 播放按钮
+        // ============================================================
         const playBtn = document.getElementById('playBtn');
         let isPlaying = false;
         playBtn.addEventListener('click', function() {
             isPlaying = !isPlaying;
             this.textContent = isPlaying ? '⏸' : '▶';
             this.style.transform = 'scale(0.92)';
-            setTimeout(() => this.style.transform = '', 150);
+            setTimeout(() => { this.style.transform = ''; }, 150);
         });
 
-        // ===== 更多按钮 =====
+        // ============================================================
+        //  5. 更多按钮
+        // ============================================================
         document.getElementById('postMoreBtn').addEventListener('click', function(e) {
             e.stopPropagation();
             alert('📋 更多菜单\n\n可自定义扩展功能');
         });
 
-        // ===== 输入框空值保护 =====
+        // ============================================================
+        //  6. 所有输入框空值保护
+        // ============================================================
         document.querySelectorAll('input[spellcheck="false"]').forEach(input => {
             const def = input.value;
             input.setAttribute('data-default', def);
@@ -1609,7 +1659,14 @@
             });
         });
 
-        console.log('✅ 个人中心已加载（图片已压缩，画廊已拉长）');
+        // ============================================================
+        //  7. 控制台提示
+        // ============================================================
+        console.log('✅ 个人中心已加载（图片压缩已启用）');
+        console.log('📅 点击 "纪念日" 气泡设置日期');
+        console.log('🖼️ 点击任意图片/头像可上传（自动压缩）');
+        console.log('🖼️ 点击背景可自定义背景图片（自动压缩）');
+
     })();
 </script>
 
