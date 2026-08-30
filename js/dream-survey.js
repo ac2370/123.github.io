@@ -1,4 +1,5 @@
 // dream-survey.js - 完整梦向问卷系统（含问卷池、多题问卷、回复模拟）
+// 修改说明：所有通过 addMessage 发送的消息都添加 quotable: false，禁止引用
 (function() {
     'use strict';
 
@@ -110,6 +111,7 @@
         return arr[Math.floor(Math.random() * arr.length)];
     }
 
+    // ---------- 修改点：添加 quotable: false ----------
     function _sendAsMessage(text, isSystem) {
         isSystem = isSystem || false;
         if (typeof addMessage === 'function') {
@@ -119,13 +121,15 @@
                 text: text,
                 timestamp: new Date(),
                 type: isSystem ? 'system' : 'normal',
-                status: 'sent'
+                status: 'sent',
+                quotable: false   // 禁止引用
             });
             if (typeof playSound === 'function') playSound('send');
         } else {
             console.warn('[梦向问卷] addMessage 未定义，但已记录:', text);
         }
     }
+    // ------------------------------------------------
 
     function _generateId() {
         return Date.now() + '_' + Math.random().toString(36).substr(2, 6);
