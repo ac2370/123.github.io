@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>侧边个人页</title>
+    <style>
+        /* ===== 全局重置 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #1a1a1a;
+        }
+
+        /* ===== 外层容器 ===== */
+        .app-wrapper {
+            width: 100%;
+            height: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            background: #F5F5F5;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 40px rgba(0,0,0,0.3);
+        }
+
+        /* ===== 自定义背景层 ===== */
+        .bg-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            background: #F5F5F5;
+            transition: background 0.5s ease;
+            pointer-events: none;
+        }
+        .bg-layer.has-image {
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* ===== 滑动容器 ===== */
+        .slide-container {
+            display: flex;
+            width: 200%;
+            height: 100%;
+            transition: transform 0.45s cubic-bezier(0.32, 0.72, 0, 1);
+            will-change: transform;
+            position: relative;
+            z-index: 1;
+        }
+        .slide-container.open {
+            transform: translateX(-50%);
+        }
+
+        /* ===== 聊天页（左半） ===== */
+        .chat-page {
+            width: 50%;
+            height: 100%;
+            background: transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            color: #aaa;
+            font-size: 14px;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .chat-page .chat-icon {
+            font-size: 44px;
+            opacity: 0.15;
+            margin-bottom: 10px;
+        }
+        .chat-page .chat-hint {
+            font-size: 12px;
+            color: #ccc;
+            margin-top: 6px;
+        }
+        .chat-page .swipe-indicator {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 40px;
+            background: rgba(0,0,0,0.06);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+        .chat-page .swipe-indicator span {
+            display: block;
+            width: 2px;
+            height: 7px;
+            background: rgba(0,0,0,0.08);
+            border-radius: 2px;
+            animation: swipePulse 1.8s ease-in-out infinite;
+        }
+        .chat-page .swipe-indicator span:nth-child(2) { animation-delay: 0.3s; }
+        .chat-page .swipe-indicator span:nth-child(3) { animation-delay: 0.6s; }
+        @keyframes swipePulse {
+            0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
+            50% { opacity: 1; transform: scaleY(1.2); }
+        }
+
+        /* ===== 个人页（右半） ===== */
+        .profile-page {
+            width: 50%;
+            height: 100%;
+            background: transparent;
+            overflow: hidden;
+            padding: 12px 14px 16px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===== 拖拽指示条 ===== */
+        .drag-handle {
+            width: 32px;
+            height: 3px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 4px;
+            margin: 0 auto 8px;
+            flex-shrink: 0;
+            opacity: 0.5;
+        }
+
+        /* ===== 所有卡片半透明背景（适应自定义背景） ===== */
+        .user-profile-card,
+        .core-interaction,
+        .play-follow-row,
+        .post-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* ===== 1. 顶部用户信息卡片 ===== */
+        .user-profile-card {
+            border-radius: 16px;
+            padding: 12px 14px 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .profile-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+        .avatar-large {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 8px;
+            user-select: none;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        .avatar-large img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .avatar-large:hover {
+            transform: scale(1.05);
+            opacity: 0.85;
+        }
+        .avatar-large .upload-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.4);
+            color: #fff;
+            font-size: 18px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .avatar-large:hover .upload-hint {
+            opacity: 1;
+        }
+        .profile-name-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+        }
+        .profile-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #1a1a1a;
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            width: 100%;
+            outline: none;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        .profile-name:hover {
+            border-bottom-color: rgba(0,0,0,0.1);
+        }
+        .profile-name:focus {
+            border-bottom-color: #1a1a1a;
+            outline: none;
+        }
+        .profile-location {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 10px;
+            color: #999;
+            cursor: pointer;
+        }
+        .profile-location i {
+            font-style: normal;
+            font-size: 11px;
+        }
+        .profile-location input {
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            font-size: 10px;
+            color: #999;
+            outline: none;
+            width: 50px;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        .profile-location input:hover {
+            border-bottom-color: rgba(0,0,0,0.1);
+        }
+        .profile-location input:focus {
+            border-bottom-color: #999;
+            color: #1a1a1a;
+            outline: none;
+        }
+        .profile-right {
+            display: flex;
+            gap: 14px;
+            flex-shrink: 0;
+            padding-left: 6px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1a1a1a;
+            background: transparent;
+            border: none;
+            padding: 0;
+            width: 32px;
+            text-align: center;
+            font-family: inherit;
+            outline: none;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        .stat-number:hover {
+            border-bottom-color: rgba(0,0,0,0.1);
+        }
+        .stat-number:focus {
+            border-bottom-color: #1a1a1a;
+            outline: none;
+        }
+        .stat-label {
+            font-size: 9px;
+            color: rgba(0,0,0,0.4);
+            letter-spacing: 0.5px;
+            margin-top: 1px;
+        }
+
+        /* ===== 2. 核心互动与计时区 ===== */
+        .core-interaction {
+            border-radius: 16px;
+            padding: 10px 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .interaction-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            flex: 1;
+        }
+        .time-bubble {
+            background: rgba(0,0,0,0.06);
+            border-radius: 16px;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #1a1a1a;
+            cursor: pointer;
+            transition: all 0.25s;
+            user-select: none;
+            border: none;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            position: relative;
+        }
+        .time-bubble:hover {
+            background: rgba(0,0,0,0.12);
+            transform: scale(1.02);
+        }
+        .time-bubble:active {
+            transform: scale(0.96);
+        }
+        .time-bubble .badge-icon {
+            font-size: 10px;
+            opacity: 0.6;
+        }
+        .time-bubble .edit-hint {
+            font-size: 8px;
+            opacity: 0.4;
+            margin-left: 2px;
+            font-weight: 400;
+        }
+        .avatar-stack {
+            display: flex;
+            align-items: center;
+        }
+        .avatar-stack .mini-avatar {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            border: 2px solid rgba(255,255,255,0.8);
+            margin-right: -6px;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 6px;
+            user-select: none;
+            overflow: hidden;
+            position: relative;
+        }
+        .avatar-stack .mini-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .avatar-stack .mini-avatar:hover {
+            transform: scale(1.1);
+        }
+        .avatar-stack .mini-avatar:last-child {
+            margin-right: 0;
+        }
+        .time-display {
+            display: flex;
+            align-items: baseline;
+            gap: 1px;
+        }
+        .time-number {
+            font-size: 20px;
+            font-weight: 800;
+            color: #1a1a1a;
+            line-height: 1;
+            min-width: 22px;
+            text-align: center;
+            padding: 0 2px;
+        }
+        .time-unit {
+            font-size: 11px;
+            font-weight: 500;
+            color: rgba(0,0,0,0.4);
+            margin-left: 1px;
+        }
+        .interaction-right {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-shrink: 0;
+            padding-left: 6px;
+        }
+        .photo-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-end;
+        }
+        .photo-card {
+            width: 38px;
+            height: 38px;
+            background: #1a1a1a;
+            border-radius: 6px;
+            border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            transform: rotate(var(--rot, 0deg));
+            cursor: pointer;
+            transition: transform 0.25s, box-shadow 0.25s, opacity 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 7px;
+            user-select: none;
+            overflow: hidden;
+            position: relative;
+        }
+        .photo-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .photo-card:hover {
+            transform: rotate(var(--rot, 0deg)) scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            opacity: 0.85;
+        }
+        .photo-card .upload-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .photo-card:hover .upload-hint {
+            opacity: 1;
+        }
+        .photo-card:first-child {
+            --rot: 6deg;
+        }
+        .photo-card:last-child {
+            --rot: -4deg;
+            margin-top: -6px;
+        }
+
+        /* ===== 3. 播放/跟随行 ===== */
+        .play-follow-row {
+            border-radius: 16px;
+            padding: 10px 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .play-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+        .play-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 7px;
+            user-select: none;
+            overflow: hidden;
+            position: relative;
+        }
+        .play-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .play-avatar:hover {
+            transform: scale(1.05);
+        }
+        .play-avatar .upload-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .play-avatar:hover .upload-hint {
+            opacity: 1;
+        }
+        .play-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0px;
+            min-width: 0;
+        }
+        .play-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1a1a1a;
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            outline: none;
+            width: 100%;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        .play-title:hover {
+            border-bottom-color: rgba(0,0,0,0.1);
+        }
+        .play-title:focus {
+            border-bottom-color: #1a1a1a;
+            outline: none;
+        }
+        .play-sub {
+            font-size: 10px;
+            color: rgba(0,0,0,0.4);
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            outline: none;
+            width: 100%;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        .play-sub:hover {
+            border-bottom-color: rgba(0,0,0,0.1);
+        }
+        .play-sub:focus {
+            border-bottom-color: rgba(0,0,0,0.3);
+            color: #1a1a1a;
+            outline: none;
+        }
+        .play-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 13px;
+        }
+        .play-btn:hover {
+            transform: scale(1.06);
+            background: #333;
+        }
+        .play-btn:active {
+            transform: scale(0.94);
+        }
+
+        /* ===== 4. 动态/发布卡片 ===== */
+        .post-card {
+            border-radius: 16px;
+            padding: 12px 14px 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+        .post-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .post-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .post-avatar-small {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 6px;
+            user-select: none;
+            overflow: hidden;
+            position: relative;
+        }
+        .post-avatar-small img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .post-avatar-small:hover {
+            transform: scale(1.05);
+        }
+        .post-avatar-small .upload-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .post-avatar-small:hover .upload-hint {
+            opacity: 1;
+        }
+        .post-user-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0px;
+        }
+        .post-username {
+            font-size: 11px;
+            font-weight: 600;
+            color: #1a1a1a;
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            outline: none;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        .post-username:hover {
+            border-bottom-color: rgba(0,0,0,0.1);
+        }
+        .post-username:focus {
+            border-bottom-color: #1a1a1a;
+            outline: none;
+        }
+        .post-user-sub {
+            font-size: 9px;
+            color: rgba(0,0,0,0.4);
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            outline: none;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        .post-user-sub:hover {
+            border-bottom-color: rgba(0,0,0,0.1);
+        }
+        .post-user-sub:focus {
+            border-bottom-color: rgba(0,0,0,0.3);
+            color: #1a1a1a;
+            outline: none;
+        }
+        .post-more {
+            display: flex;
+            gap: 3px;
+            cursor: pointer;
+            padding: 3px 6px;
+            border-radius: 10px;
+            transition: background 0.2s;
+            border: none;
+            background: transparent;
+        }
+        .post-more:hover {
+            background: rgba(0,0,0,0.06);
+        }
+        .post-more span {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.3);
+            display: block;
+        }
+
+        .post-image-area {
+            background: rgba(0,0,0,0.04);
+            border-radius: 12px;
+            padding: 16px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 72px;
+            cursor: pointer;
+            transition: background 0.3s;
+            border: 2px dashed transparent;
+        }
+        .post-image-area:hover {
+            background: rgba(0,0,0,0.08);
+            border-color: rgba(0,0,0,0.1);
+        }
+        .post-image-area .area-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(0,0,0,0.2);
+            font-size: 11px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .post-image-area:hover .area-hint {
+            opacity: 1;
+        }
+        .post-image-center {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 8px;
+            user-select: none;
+            position: relative;
+            transition: transform 0.3s;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .post-image-center img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .post-image-center:hover {
+            transform: scale(1.05);
+        }
+        .post-image-center .upload-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .post-image-center:hover .upload-hint {
+            opacity: 1;
+        }
+        .post-image-center .heart-icon {
+            position: absolute;
+            bottom: -4px;
+            right: -4px;
+            width: 16px;
+            height: 16px;
+            background: #FFFFFF;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+            color: #ff4757;
+            border: 1.5px solid rgba(255,255,255,0.8);
+            cursor: pointer;
+            transition: transform 0.2s;
+            z-index: 2;
+        }
+        .post-image-center .heart-icon:hover {
+            transform: scale(1.15);
+        }
+        .post-footer {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 2px;
+        }
+        .post-footer-left {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .post-footer-right {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            text-align: right;
+        }
+        .post-tag {
+            font-size: 10px;
+            color: rgba(0,0,0,0.4);
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            outline: none;
+            width: 60px;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        .post-tag:hover {
+            border-bottom-color: rgba(0,0,0,0.1);
+        }
+        .post-tag:focus {
+            border-bottom-color: rgba(0,0,0,0.3);
+            color: #1a1a1a;
+            outline: none;
+        }
+        .post-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #1a1a1a;
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            outline: none;
+            width: 60px;
+            border-bottom: 1px dashed transparent;
+            transition: border-color 0.3s;
+        }
+        .post-title:hover {
+            border-bottom-color: rgba(0,0,0,0.1);
+        }
+        .post-title:focus {
+            border-bottom-color: #1a1a1a;
+            outline: none;
+        }
+
+        /* ===== 5. 底部画廊/贴纸区 ===== */
+        .gallery-scroll {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 4px 0 2px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            flex-shrink: 0;
+        }
+        .gallery-scroll::-webkit-scrollbar {
+            display: none;
+            width: 0;
+        }
+        .gallery-item {
+            flex: 0 0 72px;
+            height: 72px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.6);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            transform: rotate(var(--g-rot, 0deg));
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s, opacity 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.3);
+            font-size: 7px;
+            user-select: none;
+            flex-shrink: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .gallery-item:hover {
+            transform: rotate(var(--g-rot, 0deg)) scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            opacity: 0.85;
+        }
+        .gallery-item .upload-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .gallery-item:hover .upload-hint {
+            opacity: 1;
+        }
+        .gallery-item:nth-child(1) { --g-rot: -3deg; }
+        .gallery-item:nth-child(2) { --g-rot: 4deg; }
+        .gallery-item:nth-child(3) { --g-rot: -2deg; }
+        .gallery-item:nth-child(4) { --g-rot: 5deg; }
+        .gallery-item:nth-child(5) { --g-rot: -4deg; }
+
+        /* ===== 底部背景设置按钮 ===== */
+        .bg-controls {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            padding: 4px 0 0;
+            flex-shrink: 0;
+        }
+        .bg-control-btn {
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(8px);
+            color: rgba(0,0,0,0.5);
+            font-size: 9px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .bg-control-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.04);
+        }
+        .bg-control-btn:active {
+            transform: scale(0.94);
+        }
+        .bg-control-btn .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.3);
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 480px) {
+            .app-wrapper {
+                max-width: 100%;
+                border-radius: 0;
+            }
+        }
+        @media (max-width: 420px) {
+            .profile-page {
+                padding: 10px 10px 12px;
+            }
+            .profile-right {
+                gap: 10px;
+            }
+            .stat-number {
+                font-size: 13px;
+                width: 28px;
+            }
+            .time-number {
+                font-size: 18px;
+                min-width: 20px;
+            }
+            .photo-card {
+                width: 32px;
+                height: 32px;
+            }
+            .gallery-item {
+                flex: 0 0 60px;
+                height: 60px;
+            }
+            .post-image-area {
+                min-height: 60px;
+                padding: 12px 12px;
+            }
+            .post-image-center {
+                width: 44px;
+                height: 44px;
+            }
+            .profile-name {
+                font-size: 12px;
+            }
+            .avatar-large {
+                width: 36px;
+                height: 36px;
+            }
+            .post-avatar-small {
+                width: 22px;
+                height: 22px;
+            }
+            .play-avatar {
+                width: 28px;
+                height: 28px;
+            }
+            .post-image-center .heart-icon {
+                width: 14px;
+                height: 14px;
+                font-size: 8px;
+            }
+            .bg-control-btn {
+                font-size: 8px;
+                padding: 3px 10px;
+            }
+        }
+        @media (max-width: 360px) {
+            .profile-right {
+                gap: 6px;
+            }
+            .stat-number {
+                font-size: 12px;
+                width: 24px;
+            }
+            .interaction-right {
+                gap: 4px;
+            }
+            .photo-card {
+                width: 28px;
+                height: 28px;
+            }
+            .time-number {
+                font-size: 16px;
+                min-width: 18px;
+            }
+            .gallery-item {
+                flex: 0 0 52px;
+                height: 52px;
+            }
+            .post-tag {
+                font-size: 9px;
+                width: 48px;
+            }
+            .post-title {
+                font-size: 10px;
+                width: 48px;
+            }
+            .post-card {
+                padding: 10px 10px 10px;
+            }
+            .core-interaction {
+                padding: 8px 10px;
+            }
+            .play-follow-row {
+                padding: 8px 10px;
+            }
+            .user-profile-card {
+                padding: 10px 10px 8px;
+            }
+        }
+
+        /* ===== 隐藏的文件输入 ===== */
+        .hidden-input {
+            display: none;
+        }
+
+        /* ===== 自定义背景输入 ===== */
+        .bg-file-input {
+            display: none;
+        }
+
+        /* ===== 日期选择器弹窗 ===== */
+        .date-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+        .date-modal-overlay.active {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .date-modal-box {
+            background: #fff;
+            border-radius: 20px;
+            padding: 28px 24px 24px;
+            width: 90%;
+            max-width: 340px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.35s cubic-bezier(0.32,0.72,0,1);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .date-modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .date-modal-sub {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .date-modal-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: inherit;
+            color: #1a1a1a;
+            background: #f8f8f8;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .date-modal-input:focus {
+            border-color: #1a1a1a;
+            background: #fff;
+        }
+        .date-modal-input::-webkit-calendar-picker-indicator {
+            opacity: 0.5;
+            padding: 4px;
+            cursor: pointer;
+        }
+        .date-modal-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .date-modal-btns button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .date-modal-btns .btn-cancel {
+            background: #f0f0f0;
+            color: #666;
+        }
+        .date-modal-btns .btn-cancel:hover {
+            background: #e5e5e5;
+        }
+        .date-modal-btns .btn-confirm {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .date-modal-btns .btn-confirm:hover {
+            background: #333;
+            transform: scale(1.02);
+        }
+        .date-modal-btns .btn-confirm:active {
+            transform: scale(0.96);
+        }
+
+        /* ===== 当前纪念日显示 ===== */
+        .anniversary-label {
+            font-size: 9px;
+            color: rgba(0,0,0,0.3);
+            margin-top: 1px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .anniversary-label:hover {
+            color: rgba(0,0,0,0.6);
+        }
+
+        /* ===== 拖拽时禁止文本选中 ===== */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper" id="appWrapper">
+
+    <!-- ===== 背景层 ===== -->
+    <div class="bg-layer" id="bgLayer"></div>
+
+    <!-- ===== 滑动容器 ===== -->
+    <div class="slide-container" id="slideContainer">
+
+        <!-- ===== 左：聊天页 ===== -->
+        <div class="chat-page" id="chatPage">
+            <div class="chat-icon">💬</div>
+            <div style="font-weight:500; color:rgba(0,0,0,0.4);">聊天界面</div>
+            <div class="chat-hint">← 向左滑动打开个人页</div>
+            <div class="swipe-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <!-- ===== 右：个人页 ===== -->
+        <div class="profile-page" id="profilePage">
+
+            <!-- 拖拽指示条 -->
+            <div class="drag-handle"></div>
+
+            <!-- ===== 1. 顶部用户信息卡片 ===== -->
+            <div class="user-profile-card">
+                <div class="profile-left">
+                    <div class="avatar-large" id="mainAvatar" data-type="avatar" title="点击更换头像">
+                        <span style="z-index:1;">●</span>
+                        <span class="upload-hint">+</span>
+                    </div>
+                    <div class="profile-name-area">
+                        <input class="profile-name" id="profileName" value="未定义" spellcheck="false" placeholder="昵称">
+                        <div class="profile-location">
+                            <i>📍</i>
+                            <input id="profileLocation" value="未定义" spellcheck="false" placeholder="位置">
+                        </div>
+                    </div>
+                </div>
+                <div class="profile-right">
+                    <div class="stat-item">
+                        <input class="stat-number" id="statFollowers" value="0" spellcheck="false" placeholder="0">
+                        <div class="stat-label">粉丝</div>
+                    </div>
+                    <div class="stat-item">
+                        <input class="stat-number" id="statFollowing" value="0" spellcheck="false" placeholder="0">
+                        <div class="stat-label">关注</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 2. 核心互动与计时区 ===== -->
+            <div class="core-interaction">
+                <div class="interaction-left">
+                    <button class="time-bubble" id="timeBubble">
+                        <span class="badge-icon">❤️</span>
+                        <span id="bubbleLabel">纪念日</span>
+                        <span class="edit-hint">✎</span>
+                    </button>
+                    <div class="avatar-stack">
+                        <div class="mini-avatar" data-type="avatar" title="点击更换头像">
+                            <span style="z-index:1;">●</span>
+                        </div>
+                        <div class="mini-avatar" data-type="avatar" title="点击更换头像">
+                            <span style="z-index:1;">●</span>
+                        </div>
+                    </div>
+                    <div class="time-display">
+                        <span class="time-number" id="timeNumber">0</span>
+                        <span class="time-unit">天</span>
+                    </div>
+                    <div class="anniversary-label" id="anniversaryLabel">未设置纪念日</div>
+                </div>
+                <div class="interaction-right">
+                    <div class="photo-stack">
+                        <div class="photo-card" data-type="image" title="点击替换图片">
+                            <span style="z-index:1;">📷</span>
+                            <span class="upload-hint">+</span>
+                        </div>
+                        <div class="photo-card" data-type="image" title="点击替换图片">
+                            <span style="z-index:1;">📷</span>
+                            <span class="upload-hint">+</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 3. 播放/跟随行 ===== -->
+            <div class="play-follow-row">
+                <div class="play-left">
+                    <div class="play-avatar" data-type="avatar" title="点击更换头像">
+                        <span style="z-index:1;">●</span>
+                        <span class="upload-hint">+</span>
+                    </div>
+                    <div class="play-info">
+                        <input class="play-title" id="playTitle" value="未定义" spellcheck="false" placeholder="标题">
+                        <input class="play-sub" id="playSub" value="未定义" spellcheck="false" placeholder="副标题">
+                    </div>
+                </div>
+                <button class="play-btn" id="playBtn">▶</button>
+            </div>
+
+            <!-- ===== 4. 动态/发布卡片 ===== -->
+            <div class="post-card">
+                <div class="post-header">
+                    <div class="post-user">
+                        <div class="post-avatar-small" data-type="avatar" title="点击更换头像">
+                            <span style="z-index:1;">●</span>
+                            <span class="upload-hint">+</span>
+                        </div>
+                        <div class="post-user-info">
+                            <input class="post-username" id="postUsername" value="昵称" spellcheck="false" placeholder="昵称">
+                            <input class="post-user-sub" id="postUserSub" value="副文" spellcheck="false" placeholder="副文">
+                        </div>
+                    </div>
+                    <button class="post-more" id="postMoreBtn" title="更多">
+                        <span></span><span></span><span></span>
+                    </button>
+                </div>
+                <div class="post-image-area" id="postImageArea">
+                    <div class="post-image-center" id="postCenterImage" data-type="image" title="点击更换图片">
+                        <span style="z-index:1;">●</span>
+                        <span class="upload-hint">+</span>
+                        <span class="heart-icon" id="heartIcon">♥</span>
+                    </div>
+                    <div class="area-hint">点击更换图片</div>
+                </div>
+                <div class="post-footer">
+                    <div class="post-footer-left">
+                        <input class="post-tag" id="postTagLeft1" value="标签" spellcheck="false" placeholder="标签">
+                        <input class="post-tag" id="postTagLeft2" value="文案" spellcheck="false" placeholder="文案">
+                        <input class="post-tag" id="postTagLeft3" value="注册" spellcheck="false" placeholder="注册">
+                    </div>
+                    <div class="post-footer-right">
+                        <input class="post-title" id="postTitleRight1" value="标签" spellcheck="false" placeholder="标签">
+                        <input class="post-title" id="postTitleRight2" value="标题" spellcheck="false" placeholder="标题">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 5. 底部画廊/贴纸区 ===== -->
+            <div class="gallery-scroll" id="galleryScroll">
+                <div class="gallery-item" data-type="image" title="点击替换图片">
+                    <span style="z-index:1;">🖼️</span>
+                    <span class="upload-hint">+</span>
+                </div>
+                <div class="gallery-item" data-type="image" title="点击替换图片">
+                    <span style="z-index:1;">🖼️</span>
+                    <span class="upload-hint">+</span>
+                </div>
+                <div class="gallery-item" data-type="image" title="点击替换图片">
+                    <span style="z-index:1;">🖼️</span>
+                    <span class="upload-hint">+</span>
+                </div>
+                <div class="gallery-item" data-type="image" title="点击替换图片">
+                    <span style="z-index:1;">🖼️</span>
+                    <span class="upload-hint">+</span>
+                </div>
+                <div class="gallery-item" data-type="image" title="点击替换图片">
+                    <span style="z-index:1;">🖼️</span>
+                    <span class="upload-hint">+</span>
+                </div>
+            </div>
+
+            <!-- ===== 底部背景控制 ===== -->
+            <div class="bg-controls">
+                <button class="bg-control-btn" data-bg="#F5F5F5">
+                    <span class="dot" style="background:#F5F5F5;"></span> 默认
+                </button>
+                <button class="bg-control-btn" data-bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+                    <span class="dot" style="background:linear-gradient(135deg, #667eea, #764ba2);"></span> 渐变
+                </button>
+                <button class="bg-control-btn" data-bg="#1a1a2e">
+                    <span class="dot" style="background:#1a1a2e;"></span> 深色
+                </button>
+                <button class="bg-control-btn" id="bgUploadBtn">
+                    🖼️ 图片
+                </button>
+            </div>
+
+        </div><!-- /profile-page -->
+
+    </div><!-- /slide-container -->
+
+</div><!-- /app-wrapper -->
+
+<!-- ===== 隐藏的文件输入 ===== -->
+<input type="file" class="hidden-input" id="fileInput" accept="image/*">
+<input type="file" class="hidden-input" id="bgFileInput" accept="image/*">
+
+<!-- ===== 日期选择器弹窗 ===== -->
+<div class="date-modal-overlay" id="dateModal">
+    <div class="date-modal-box">
+        <div class="date-modal-title">📅 设置纪念日</div>
+        <div class="date-modal-sub">选择日期，自动计算已度过的天数</div>
+        <input type="date" class="date-modal-input" id="datePicker">
+        <div class="date-modal-btns">
+            <button class="btn-cancel" id="dateCancel">取消</button>
+            <button class="btn-confirm" id="dateConfirm">确认</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        'use strict';
+
+        // ============================================================
+        //  1. 滑动切换
+        // ============================================================
+        const slideContainer = document.getElementById('slideContainer');
+        const chatPage = document.getElementById('chatPage');
+        const profilePage = document.getElementById('profilePage');
+
+        let isOpen = false;
+
+        function openProfile() {
+            slideContainer.classList.add('open');
+            isOpen = true;
+        }
+
+        function closeProfile() {
+            slideContainer.classList.remove('open');
+            isOpen = false;
+        }
+
+        // 触摸：向左滑动打开
+        let touchStartX = 0, touchStartY = 0, isSwiping = false;
+        chatPage.addEventListener('touchstart', e => {
+            const t = e.touches[0];
+            touchStartX = t.clientX;
+            touchStartY = t.clientY;
+            isSwiping = true;
+        }, { passive: true });
+
+        chatPage.addEventListener('touchmove', e => {
+            if (!isSwiping) return;
+            const t = e.touches[0];
+            const dx = t.clientX - touchStartX;
+            const dy = t.clientY - touchStartY;
+            if (dx < -30 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+                openProfile();
+                isSwiping = false;
+            }
+        }, { passive: true });
+
+        chatPage.addEventListener('touchend', () => { isSwiping = false; }, { passive: true });
+
+        // 个人页向右滑动关闭
+        let pTouchStartX = 0, pTouchStartY = 0, pIsSwiping = false;
+        profilePage.addEventListener('touchstart', e => {
+            const t = e.touches[0];
+            pTouchStartX = t.clientX;
+            pTouchStartY = t.clientY;
+            pIsSwiping = true;
+        }, { passive: true });
+
+        profilePage.addEventListener('touchmove', e => {
+            if (!pIsSwiping || !isOpen) return;
+            const t = e.touches[0];
+            const dx = t.clientX - pTouchStartX;
+            const dy = t.clientY - pTouchStartY;
+            if (dx > 30 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+                closeProfile();
+                pIsSwiping = false;
+            }
+        }, { passive: true });
+
+        profilePage.addEventListener('touchend', () => { pIsSwiping = false; }, { passive: true });
+
+        // 鼠标支持
+        let mDownX = 0, mDownY = 0, mDragging = false;
+        chatPage.addEventListener('mousedown', e => {
+            mDownX = e.clientX;
+            mDownY = e.clientY;
+            mDragging = true;
+        });
+        chatPage.addEventListener('mousemove', e => {
+            if (!mDragging) return;
+            const dx = e.clientX - mDownX;
+            const dy = e.clientY - mDownY;
+            if (dx < -30 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+                openProfile();
+                mDragging = false;
+            }
+        });
+        chatPage.addEventListener('mouseup', () => { mDragging = false; });
+        chatPage.addEventListener('mouseleave', () => { mDragging = false; });
+
+        let pMDownX = 0, pMDownY = 0, pMDragging = false;
+        profilePage.addEventListener('mousedown', e => {
+            if (!isOpen) return;
+            pMDownX = e.clientX;
+            pMDownY = e.clientY;
+            pMDragging = true;
+        });
+        profilePage.addEventListener('mousemove', e => {
+            if (!pMDragging || !isOpen) return;
+            const dx = e.clientX - pMDownX;
+            const dy = e.clientY - pMDownY;
+            if (dx > 30 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+                closeProfile();
+                pMDragging = false;
+            }
+        });
+        profilePage.addEventListener('mouseup', () => { pMDragging = false; });
+        profilePage.addEventListener('mouseleave', () => { pMDragging = false; });
+
+        // ============================================================
+        //  2. 纪念日逻辑
+        // ============================================================
+        const timeBubble = document.getElementById('timeBubble');
+        const timeNumber = document.getElementById('timeNumber');
+        const anniversaryLabel = document.getElementById('anniversaryLabel');
+        const dateModal = document.getElementById('dateModal');
+        const datePicker = document.getElementById('datePicker');
+        const dateConfirm = document.getElementById('dateConfirm');
+        const dateCancel = document.getElementById('dateCancel');
+
+        let anniversaryDate = null; // 存储 Date 对象
+
+        // 从 localStorage 恢复
+        try {
+            const saved = localStorage.getItem('anniversary_date');
+            if (saved) {
+                const d = new Date(saved);
+                if (!isNaN(d.getTime())) {
+                    anniversaryDate = d;
+                    updateDaysDisplay();
+                }
+            }
+        } catch (e) {}
+
+        function updateDaysDisplay() {
+            if (!anniversaryDate) {
+                timeNumber.textContent = '0';
+                anniversaryLabel.textContent = '未设置纪念日';
+                return;
+            }
+            const now = new Date();
+            // 重置时间部分，只比较日期
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const start = new Date(anniversaryDate.getFullYear(), anniversaryDate.getMonth(), anniversaryDate.getDate());
+            const diffTime = today.getTime() - start.getTime();
+            const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const displayDays = days >= 0 ? days : 0;
+            timeNumber.textContent = displayDays;
+
+            const y = anniversaryDate.getFullYear();
+            const m = String(anniversaryDate.getMonth() + 1).padStart(2, '0');
+            const d = String(anniversaryDate.getDate()).padStart(2, '0');
+            anniversaryLabel.textContent = `❤️ ${y}.${m}.${d} 至今`;
+            // 保存
+            try {
+                localStorage.setItem('anniversary_date', anniversaryDate.toISOString());
+            } catch (e) {}
+        }
+
+        // 点击气泡打开日期选择器
+        timeBubble.addEventListener('click', function(e) {
+            e.stopPropagation();
+            // 如果有纪念日，预填
+            if (anniversaryDate) {
+                const y = anniversaryDate.getFullYear();
+                const m = String(anniversaryDate.getMonth() + 1).padStart(2, '0');
+                const d = String(anniversaryDate.getDate()).padStart(2, '0');
+                datePicker.value = `${y}-${m}-${d}`;
+            } else {
+                // 默认今天
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                datePicker.value = `${y}-${m}-${d}`;
+            }
+            dateModal.classList.add('active');
+        });
+
+        function closeDateModal() {
+            dateModal.classList.remove('active');
+        }
+
+        dateCancel.addEventListener('click', closeDateModal);
+
+        dateConfirm.addEventListener('click', function() {
+            const val = datePicker.value;
+            if (!val) {
+                alert('请选择一个日期');
+                return;
+            }
+            const parts = val.split('-');
+            const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            if (isNaN(d.getTime())) {
+                alert('无效日期');
+                return;
+            }
+            anniversaryDate = d;
+            updateDaysDisplay();
+            closeDateModal();
+            // 反馈
+            timeBubble.style.transform = 'scale(0.92)';
+            setTimeout(() => { timeBubble.style.transform = ''; }, 150);
+        });
+
+        // 点击外部关闭弹窗
+        dateModal.addEventListener('click', function(e) {
+            if (e.target === this) closeDateModal();
+        });
+
+        // 点击标签可快速重置
+        anniversaryLabel.addEventListener('click', function() {
+            if (anniversaryDate && confirm('清除纪念日设置？')) {
+                anniversaryDate = null;
+                try { localStorage.removeItem('anniversary_date'); } catch(e) {}
+                updateDaysDisplay();
+            }
+        });
+
+        // ============================================================
+        //  3. 图片/头像上传功能
+        // ============================================================
+        const fileInput = document.getElementById('fileInput');
+        let currentTarget = null;
+
+        // 点击任何带 data-type="image" 或 data-type="avatar" 的元素触发上传
+        document.querySelectorAll('[data-type="image"], [data-type="avatar"]').forEach(el => {
+            el.addEventListener('click', function(e) {
+                // 防止点击内部图标触发多次
+                if (e.target.closest('.heart-icon')) return;
+                e.stopPropagation();
+                currentTarget = this;
+                fileInput.click();
+            });
+        });
+
+        // 也支持点击 post-image-area 上传中间大图
+        document.getElementById('postImageArea').addEventListener('click', function(e) {
+            if (e.target.closest('.post-image-center') || e.target.closest('.heart-icon')) return;
+            currentTarget = document.getElementById('postCenterImage');
+            fileInput.click();
+        });
+
+        // 点击 heart-icon 不触发上传，只做交互
+        document.getElementById('heartIcon').addEventListener('click', function(e) {
+            e.stopPropagation();
+            this.style.transform = 'scale(1.3)';
+            this.style.color = '#ff6b81';
+            setTimeout(() => {
+                this.style.transform = '';
+                this.style.color = '#ff4757';
+            }, 300);
+            alert('❤️ 已收藏 (演示交互)');
+        });
+
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file || !currentTarget) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imgData = e.target.result;
+                // 清空目标，添加图片
+                currentTarget.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = imgData;
+                img.alt = 'uploaded';
+                currentTarget.appendChild(img);
+
+                // 如果是 post-image-center，需要保留 heart-icon
+                if (currentTarget.id === 'postCenterImage') {
+                    const heart = document.createElement('span');
+                    heart.className = 'heart-icon';
+                    heart.id = 'heartIcon';
+                    heart.textContent = '♥';
+                    currentTarget.appendChild(heart);
+                    // 重新绑定 heart 事件
+                    heart.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        this.style.transform = 'scale(1.3)';
+                        this.style.color = '#ff6b81';
+                        setTimeout(() => {
+                            this.style.transform = '';
+                            this.style.color = '#ff4757';
+                        }, 300);
+                        alert('❤️ 已收藏 (演示交互)');
+                    });
+                }
+            };
+            reader.readAsDataURL(file);
+            this.value = '';
+            currentTarget = null;
+        });
+
+        // ============================================================
+        //  4. 背景设置
+        // ============================================================
+        const bgLayer = document.getElementById('bgLayer');
+        const bgFileInput = document.getElementById('bgFileInput');
+
+        // 预设背景按钮
+        document.querySelectorAll('.bg-control-btn[data-bg]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const bg = this.dataset.bg;
+                bgLayer.style.background = bg;
+                bgLayer.style.backgroundSize = 'cover';
+                bgLayer.style.backgroundPosition = 'center';
+                bgLayer.classList.remove('has-image');
+            });
+        });
+
+        // 上传图片背景
+        document.getElementById('bgUploadBtn').addEventListener('click', function() {
+            bgFileInput.click();
+        });
+
+        bgFileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                bgLayer.style.backgroundImage = `url(${e.target.result})`;
+                bgLayer.style.backgroundSize = 'cover';
+                bgLayer.style.backgroundPosition = 'center';
+                bgLayer.classList.add('has-image');
+            };
+            reader.readAsDataURL(file);
+            this.value = '';
+        });
+
+        // ============================================================
+        //  5. 播放按钮
+        // ============================================================
+        const playBtn = document.getElementById('playBtn');
+        let isPlaying = false;
+        playBtn.addEventListener('click', function() {
+            isPlaying = !isPlaying;
+            this.textContent = isPlaying ? '⏸' : '▶';
+            this.style.transform = 'scale(0.92)';
+            setTimeout(() => { this.style.transform = ''; }, 150);
+        });
+
+        // ============================================================
+        //  6. 更多按钮
+        // ============================================================
+        document.getElementById('postMoreBtn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            alert('📋 更多菜单\n\n可自定义扩展功能');
+        });
+
+        // ============================================================
+        //  7. 所有输入框空值保护
+        // ============================================================
+        document.querySelectorAll('input[spellcheck="false"]').forEach(input => {
+            const def = input.value;
+            input.setAttribute('data-default', def);
+            input.addEventListener('blur', function() {
+                if (this.value.trim() === '') {
+                    this.value = this.getAttribute('data-default') || '未定义';
+                }
+            });
+        });
+
+        // ============================================================
+        //  8. 暴露控制台
+        // ============================================================
+        window.openProfile = openProfile;
+        window.closeProfile = closeProfile;
+        window.toggleProfile = function() { isOpen ? closeProfile() : openProfile(); };
+
+        console.log('✅ 侧边个人页已加载');
+        console.log('💡 向左滑动聊天界面 → 打开个人页');
+        console.log('💡 向右滑动个人页 → 关闭');
+        console.log('📅 点击 "纪念日" 气泡设置日期');
+        console.log('🖼️ 点击任何图片/头像可上传替换');
+
+    })();
+</script>
+
+</body>
+</html>
