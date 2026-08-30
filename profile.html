@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>侧边个人页</title>
+    <title>个人中心</title>
     <style>
         /* ===== 全局重置 ===== */
         * {
@@ -14,32 +14,39 @@
         }
         html, body {
             width: 100%;
-            height: 100%;
-            overflow: hidden;
+            min-height: 100vh;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
         }
 
         /* ===== 外层容器 ===== */
         .app-wrapper {
             width: 100%;
-            height: 100%;
             max-width: 480px;
-            margin: 0 auto;
+            min-height: 100vh;
             background: #F5F5F5;
             position: relative;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
             box-shadow: 0 0 40px rgba(0,0,0,0.3);
+            padding: 12px 14px 16px;
         }
 
         /* ===== 自定义背景层 ===== */
         .bg-layer {
-            position: absolute;
+            position: fixed;
             inset: 0;
             z-index: 0;
             background: #F5F5F5;
             transition: background 0.5s ease;
             pointer-events: none;
+            max-width: 480px;
+            margin: 0 auto;
+            left: 50%;
+            transform: translateX(-50%);
         }
         .bg-layer.has-image {
             background-size: cover;
@@ -47,102 +54,7 @@
             background-repeat: no-repeat;
         }
 
-        /* ===== 滑动容器 ===== */
-        .slide-container {
-            display: flex;
-            width: 200%;
-            height: 100%;
-            transition: transform 0.45s cubic-bezier(0.32, 0.72, 0, 1);
-            will-change: transform;
-            position: relative;
-            z-index: 1;
-        }
-        .slide-container.open {
-            transform: translateX(-50%);
-        }
-
-        /* ===== 聊天页（左半） ===== */
-        .chat-page {
-            width: 50%;
-            height: 100%;
-            background: transparent;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 30px;
-            color: #aaa;
-            font-size: 14px;
-            flex-shrink: 0;
-            position: relative;
-        }
-        .chat-page .chat-icon {
-            font-size: 44px;
-            opacity: 0.15;
-            margin-bottom: 10px;
-        }
-        .chat-page .chat-hint {
-            font-size: 12px;
-            color: #ccc;
-            margin-top: 6px;
-        }
-        .chat-page .swipe-indicator {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 4px;
-            height: 40px;
-            background: rgba(0,0,0,0.06);
-            border-radius: 4px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            padding: 5px 0;
-        }
-        .chat-page .swipe-indicator span {
-            display: block;
-            width: 2px;
-            height: 7px;
-            background: rgba(0,0,0,0.08);
-            border-radius: 2px;
-            animation: swipePulse 1.8s ease-in-out infinite;
-        }
-        .chat-page .swipe-indicator span:nth-child(2) { animation-delay: 0.3s; }
-        .chat-page .swipe-indicator span:nth-child(3) { animation-delay: 0.6s; }
-        @keyframes swipePulse {
-            0%, 100% { opacity: 0.3; transform: scaleY(0.6); }
-            50% { opacity: 1; transform: scaleY(1.2); }
-        }
-
-        /* ===== 个人页（右半） ===== */
-        .profile-page {
-            width: 50%;
-            height: 100%;
-            background: transparent;
-            overflow: hidden;
-            padding: 12px 14px 16px;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* ===== 拖拽指示条 ===== */
-        .drag-handle {
-            width: 32px;
-            height: 3px;
-            background: rgba(255,255,255,0.4);
-            border-radius: 4px;
-            margin: 0 auto 8px;
-            flex-shrink: 0;
-            opacity: 0.5;
-        }
-
-        /* ===== 所有卡片半透明背景（适应自定义背景） ===== */
+        /* ===== 所有卡片半透明背景 ===== */
         .user-profile-card,
         .core-interaction,
         .play-follow-row,
@@ -153,12 +65,21 @@
             border: 1px solid rgba(255,255,255,0.3);
         }
 
+        /* ===== 页面内容 ===== */
+        .profile-page {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-bottom: 10px;
+        }
+
         /* ===== 1. 顶部用户信息卡片 ===== */
         .user-profile-card {
             border-radius: 16px;
             padding: 12px 14px 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-            margin-bottom: 8px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -318,7 +239,6 @@
             border-radius: 16px;
             padding: 10px 14px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-            margin-bottom: 8px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -496,7 +416,6 @@
             border-radius: 16px;
             padding: 10px 14px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-            margin-bottom: 8px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -628,7 +547,6 @@
             border-radius: 16px;
             padding: 12px 14px 12px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-            margin-bottom: 8px;
             flex-shrink: 0;
         }
         .post-header {
@@ -908,12 +826,11 @@
             outline: none;
         }
 
-        /* ===== 5. 底部画廊/贴纸区（修改：4张居中，间距一致） ===== */
+        /* ===== 5. 底部画廊/贴纸区（4张居中） ===== */
         .gallery-scroll {
             display: flex;
-            gap: 12px;          /* 统一间距 */
-            justify-content: center; /* 居中 */
-            overflow-x: visible; /* 不滚动，若需要可改为 auto */
+            gap: 12px;
+            justify-content: center;
             flex-wrap: nowrap;
             padding: 4px 0 2px;
             flex-shrink: 0;
@@ -971,7 +888,6 @@
         .gallery-item:hover .upload-hint {
             opacity: 1;
         }
-        /* 仅对前4个设置旋转角度（原来有5个，现改为4个） */
         .gallery-item:nth-child(1) { --g-rot: -3deg; }
         .gallery-item:nth-child(2) { --g-rot: 4deg; }
         .gallery-item:nth-child(3) { --g-rot: -2deg; }
@@ -1024,7 +940,7 @@
             }
         }
         @media (max-width: 420px) {
-            .profile-page {
+            .app-wrapper {
                 padding: 10px 10px 12px;
             }
             .profile-right {
@@ -1247,12 +1163,6 @@
         .anniversary-label:hover {
             color: rgba(0,0,0,0.6);
         }
-
-        /* ===== 拖拽时禁止文本选中 ===== */
-        .no-select {
-            user-select: none;
-            -webkit-user-select: none;
-        }
     </style>
 </head>
 <body>
@@ -1262,182 +1172,162 @@
     <!-- ===== 背景层 ===== -->
     <div class="bg-layer" id="bgLayer"></div>
 
-    <!-- ===== 滑动容器 ===== -->
-    <div class="slide-container" id="slideContainer">
+    <!-- ===== 个人页内容 ===== -->
+    <div class="profile-page" id="profilePage">
 
-        <!-- ===== 左：聊天页 ===== -->
-        <div class="chat-page" id="chatPage">
-            <div class="chat-icon">💬</div>
-            <div style="font-weight:500; color:rgba(0,0,0,0.4);">聊天界面</div>
-            <div class="chat-hint">← 向左滑动打开个人页</div>
-            <div class="swipe-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+        <!-- ===== 1. 顶部用户信息卡片 ===== -->
+        <div class="user-profile-card">
+            <div class="profile-left">
+                <div class="avatar-large" id="mainAvatar" data-type="avatar" title="点击更换头像">
+                    <span style="z-index:1;">●</span>
+                    <span class="upload-hint">+</span>
+                </div>
+                <div class="profile-name-area">
+                    <input class="profile-name" id="profileName" value="未定义" spellcheck="false" placeholder="昵称">
+                    <div class="profile-location">
+                        <i>📍</i>
+                        <input id="profileLocation" value="未定义" spellcheck="false" placeholder="位置">
+                    </div>
+                </div>
+            </div>
+            <div class="profile-right">
+                <div class="stat-item">
+                    <input class="stat-number" id="statFollowers" value="0" spellcheck="false" placeholder="0">
+                    <div class="stat-label">粉丝</div>
+                </div>
+                <div class="stat-item">
+                    <input class="stat-number" id="statFollowing" value="0" spellcheck="false" placeholder="0">
+                    <div class="stat-label">关注</div>
+                </div>
             </div>
         </div>
 
-        <!-- ===== 右：个人页 ===== -->
-        <div class="profile-page" id="profilePage">
+        <!-- ===== 2. 核心互动与计时区 ===== -->
+        <div class="core-interaction">
+            <div class="interaction-left">
+                <button class="time-bubble" id="timeBubble">
+                    <span class="badge-icon">❤️</span>
+                    <span id="bubbleLabel">纪念日</span>
+                    <span class="edit-hint">✎</span>
+                </button>
+                <div class="avatar-stack">
+                    <div class="mini-avatar" data-type="avatar" title="点击更换头像">
+                        <span style="z-index:1;">●</span>
+                    </div>
+                    <div class="mini-avatar" data-type="avatar" title="点击更换头像">
+                        <span style="z-index:1;">●</span>
+                    </div>
+                </div>
+                <div class="time-display">
+                    <span class="time-number" id="timeNumber">0</span>
+                    <span class="time-unit">天</span>
+                </div>
+                <div class="anniversary-label" id="anniversaryLabel">未设置纪念日</div>
+            </div>
+            <div class="interaction-right">
+                <div class="photo-stack">
+                    <div class="photo-card" data-type="image" title="点击替换图片">
+                        <span style="z-index:1;">📷</span>
+                        <span class="upload-hint">+</span>
+                    </div>
+                    <div class="photo-card" data-type="image" title="点击替换图片">
+                        <span style="z-index:1;">📷</span>
+                        <span class="upload-hint">+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            <!-- 拖拽指示条 -->
-            <div class="drag-handle"></div>
+        <!-- ===== 3. 播放/跟随行 ===== -->
+        <div class="play-follow-row">
+            <div class="play-left">
+                <div class="play-avatar" data-type="avatar" title="点击更换头像">
+                    <span style="z-index:1;">●</span>
+                    <span class="upload-hint">+</span>
+                </div>
+                <div class="play-info">
+                    <input class="play-title" id="playTitle" value="未定义" spellcheck="false" placeholder="标题">
+                    <input class="play-sub" id="playSub" value="未定义" spellcheck="false" placeholder="副标题">
+                </div>
+            </div>
+            <button class="play-btn" id="playBtn">▶</button>
+        </div>
 
-            <!-- ===== 1. 顶部用户信息卡片 ===== -->
-            <div class="user-profile-card">
-                <div class="profile-left">
-                    <div class="avatar-large" id="mainAvatar" data-type="avatar" title="点击更换头像">
+        <!-- ===== 4. 动态/发布卡片 ===== -->
+        <div class="post-card">
+            <div class="post-header">
+                <div class="post-user">
+                    <div class="post-avatar-small" data-type="avatar" title="点击更换头像">
                         <span style="z-index:1;">●</span>
                         <span class="upload-hint">+</span>
                     </div>
-                    <div class="profile-name-area">
-                        <input class="profile-name" id="profileName" value="未定义" spellcheck="false" placeholder="昵称">
-                        <div class="profile-location">
-                            <i>📍</i>
-                            <input id="profileLocation" value="未定义" spellcheck="false" placeholder="位置">
-                        </div>
+                    <div class="post-user-info">
+                        <input class="post-username" id="postUsername" value="昵称" spellcheck="false" placeholder="昵称">
+                        <input class="post-user-sub" id="postUserSub" value="副文" spellcheck="false" placeholder="副文">
                     </div>
                 </div>
-                <div class="profile-right">
-                    <div class="stat-item">
-                        <input class="stat-number" id="statFollowers" value="0" spellcheck="false" placeholder="0">
-                        <div class="stat-label">粉丝</div>
-                    </div>
-                    <div class="stat-item">
-                        <input class="stat-number" id="statFollowing" value="0" spellcheck="false" placeholder="0">
-                        <div class="stat-label">关注</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===== 2. 核心互动与计时区 ===== -->
-            <div class="core-interaction">
-                <div class="interaction-left">
-                    <button class="time-bubble" id="timeBubble">
-                        <span class="badge-icon">❤️</span>
-                        <span id="bubbleLabel">纪念日</span>
-                        <span class="edit-hint">✎</span>
-                    </button>
-                    <div class="avatar-stack">
-                        <div class="mini-avatar" data-type="avatar" title="点击更换头像">
-                            <span style="z-index:1;">●</span>
-                        </div>
-                        <div class="mini-avatar" data-type="avatar" title="点击更换头像">
-                            <span style="z-index:1;">●</span>
-                        </div>
-                    </div>
-                    <div class="time-display">
-                        <span class="time-number" id="timeNumber">0</span>
-                        <span class="time-unit">天</span>
-                    </div>
-                    <div class="anniversary-label" id="anniversaryLabel">未设置纪念日</div>
-                </div>
-                <div class="interaction-right">
-                    <div class="photo-stack">
-                        <div class="photo-card" data-type="image" title="点击替换图片">
-                            <span style="z-index:1;">📷</span>
-                            <span class="upload-hint">+</span>
-                        </div>
-                        <div class="photo-card" data-type="image" title="点击替换图片">
-                            <span style="z-index:1;">📷</span>
-                            <span class="upload-hint">+</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===== 3. 播放/跟随行 ===== -->
-            <div class="play-follow-row">
-                <div class="play-left">
-                    <div class="play-avatar" data-type="avatar" title="点击更换头像">
-                        <span style="z-index:1;">●</span>
-                        <span class="upload-hint">+</span>
-                    </div>
-                    <div class="play-info">
-                        <input class="play-title" id="playTitle" value="未定义" spellcheck="false" placeholder="标题">
-                        <input class="play-sub" id="playSub" value="未定义" spellcheck="false" placeholder="副标题">
-                    </div>
-                </div>
-                <button class="play-btn" id="playBtn">▶</button>
-            </div>
-
-            <!-- ===== 4. 动态/发布卡片 ===== -->
-            <div class="post-card">
-                <div class="post-header">
-                    <div class="post-user">
-                        <div class="post-avatar-small" data-type="avatar" title="点击更换头像">
-                            <span style="z-index:1;">●</span>
-                            <span class="upload-hint">+</span>
-                        </div>
-                        <div class="post-user-info">
-                            <input class="post-username" id="postUsername" value="昵称" spellcheck="false" placeholder="昵称">
-                            <input class="post-user-sub" id="postUserSub" value="副文" spellcheck="false" placeholder="副文">
-                        </div>
-                    </div>
-                    <button class="post-more" id="postMoreBtn" title="更多">
-                        <span></span><span></span><span></span>
-                    </button>
-                </div>
-                <div class="post-image-area" id="postImageArea">
-                    <div class="post-image-center" id="postCenterImage" data-type="image" title="点击更换图片">
-                        <span style="z-index:1;">●</span>
-                        <span class="upload-hint">+</span>
-                        <span class="heart-icon" id="heartIcon">♥</span>
-                    </div>
-                    <div class="area-hint">点击更换图片</div>
-                </div>
-                <div class="post-footer">
-                    <div class="post-footer-left">
-                        <input class="post-tag" id="postTagLeft1" value="标签" spellcheck="false" placeholder="标签">
-                        <input class="post-tag" id="postTagLeft2" value="文案" spellcheck="false" placeholder="文案">
-                        <input class="post-tag" id="postTagLeft3" value="注册" spellcheck="false" placeholder="注册">
-                    </div>
-                    <div class="post-footer-right">
-                        <input class="post-title" id="postTitleRight1" value="标签" spellcheck="false" placeholder="标签">
-                        <input class="post-title" id="postTitleRight2" value="标题" spellcheck="false" placeholder="标题">
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===== 5. 底部画廊/贴纸区（改为4张） ===== -->
-            <div class="gallery-scroll" id="galleryScroll">
-                <div class="gallery-item" data-type="image" title="点击替换图片">
-                    <span style="z-index:1;">🖼️</span>
-                    <span class="upload-hint">+</span>
-                </div>
-                <div class="gallery-item" data-type="image" title="点击替换图片">
-                    <span style="z-index:1;">🖼️</span>
-                    <span class="upload-hint">+</span>
-                </div>
-                <div class="gallery-item" data-type="image" title="点击替换图片">
-                    <span style="z-index:1;">🖼️</span>
-                    <span class="upload-hint">+</span>
-                </div>
-                <div class="gallery-item" data-type="image" title="点击替换图片">
-                    <span style="z-index:1;">🖼️</span>
-                    <span class="upload-hint">+</span>
-                </div>
-            </div>
-
-            <!-- ===== 底部背景控制 ===== -->
-            <div class="bg-controls">
-                <button class="bg-control-btn" data-bg="#F5F5F5">
-                    <span class="dot" style="background:#F5F5F5;"></span> 默认
-                </button>
-                <button class="bg-control-btn" data-bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
-                    <span class="dot" style="background:linear-gradient(135deg, #667eea, #764ba2);"></span> 渐变
-                </button>
-                <button class="bg-control-btn" data-bg="#1a1a2e">
-                    <span class="dot" style="background:#1a1a2e;"></span> 深色
-                </button>
-                <button class="bg-control-btn" id="bgUploadBtn">
-                    🖼️ 图片
+                <button class="post-more" id="postMoreBtn" title="更多">
+                    <span></span><span></span><span></span>
                 </button>
             </div>
+            <div class="post-image-area" id="postImageArea">
+                <div class="post-image-center" id="postCenterImage" data-type="image" title="点击更换图片">
+                    <span style="z-index:1;">●</span>
+                    <span class="upload-hint">+</span>
+                    <span class="heart-icon" id="heartIcon">♥</span>
+                </div>
+                <div class="area-hint">点击更换图片</div>
+            </div>
+            <div class="post-footer">
+                <div class="post-footer-left">
+                    <input class="post-tag" id="postTagLeft1" value="标签" spellcheck="false" placeholder="标签">
+                    <input class="post-tag" id="postTagLeft2" value="文案" spellcheck="false" placeholder="文案">
+                    <input class="post-tag" id="postTagLeft3" value="注册" spellcheck="false" placeholder="注册">
+                </div>
+                <div class="post-footer-right">
+                    <input class="post-title" id="postTitleRight1" value="标签" spellcheck="false" placeholder="标签">
+                    <input class="post-title" id="postTitleRight2" value="标题" spellcheck="false" placeholder="标题">
+                </div>
+            </div>
+        </div>
 
-        </div><!-- /profile-page -->
+        <!-- ===== 5. 底部画廊/贴纸区（4张居中） ===== -->
+        <div class="gallery-scroll" id="galleryScroll">
+            <div class="gallery-item" data-type="image" title="点击替换图片">
+                <span style="z-index:1;">🖼️</span>
+                <span class="upload-hint">+</span>
+            </div>
+            <div class="gallery-item" data-type="image" title="点击替换图片">
+                <span style="z-index:1;">🖼️</span>
+                <span class="upload-hint">+</span>
+            </div>
+            <div class="gallery-item" data-type="image" title="点击替换图片">
+                <span style="z-index:1;">🖼️</span>
+                <span class="upload-hint">+</span>
+            </div>
+            <div class="gallery-item" data-type="image" title="点击替换图片">
+                <span style="z-index:1;">🖼️</span>
+                <span class="upload-hint">+</span>
+            </div>
+        </div>
 
-    </div><!-- /slide-container -->
+        <!-- ===== 底部背景控制 ===== -->
+        <div class="bg-controls">
+            <button class="bg-control-btn" data-bg="#F5F5F5">
+                <span class="dot" style="background:#F5F5F5;"></span> 默认
+            </button>
+            <button class="bg-control-btn" data-bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+                <span class="dot" style="background:linear-gradient(135deg, #667eea, #764ba2);"></span> 渐变
+            </button>
+            <button class="bg-control-btn" data-bg="#1a1a2e">
+                <span class="dot" style="background:#1a1a2e;"></span> 深色
+            </button>
+            <button class="bg-control-btn" id="bgUploadBtn">
+                🖼️ 图片
+            </button>
+        </div>
+
+    </div><!-- /profile-page -->
 
 </div><!-- /app-wrapper -->
 
@@ -1463,108 +1353,7 @@
         'use strict';
 
         // ============================================================
-        //  1. 滑动切换
-        // ============================================================
-        const slideContainer = document.getElementById('slideContainer');
-        const chatPage = document.getElementById('chatPage');
-        const profilePage = document.getElementById('profilePage');
-
-        let isOpen = false;
-
-        function openProfile() {
-            slideContainer.classList.add('open');
-            isOpen = true;
-        }
-
-        function closeProfile() {
-            slideContainer.classList.remove('open');
-            isOpen = false;
-        }
-
-        // 触摸：向左滑动打开
-        let touchStartX = 0, touchStartY = 0, isSwiping = false;
-        chatPage.addEventListener('touchstart', e => {
-            const t = e.touches[0];
-            touchStartX = t.clientX;
-            touchStartY = t.clientY;
-            isSwiping = true;
-        }, { passive: true });
-
-        chatPage.addEventListener('touchmove', e => {
-            if (!isSwiping) return;
-            const t = e.touches[0];
-            const dx = t.clientX - touchStartX;
-            const dy = t.clientY - touchStartY;
-            if (dx < -30 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-                openProfile();
-                isSwiping = false;
-            }
-        }, { passive: true });
-
-        chatPage.addEventListener('touchend', () => { isSwiping = false; }, { passive: true });
-
-        // 个人页向右滑动关闭
-        let pTouchStartX = 0, pTouchStartY = 0, pIsSwiping = false;
-        profilePage.addEventListener('touchstart', e => {
-            const t = e.touches[0];
-            pTouchStartX = t.clientX;
-            pTouchStartY = t.clientY;
-            pIsSwiping = true;
-        }, { passive: true });
-
-        profilePage.addEventListener('touchmove', e => {
-            if (!pIsSwiping || !isOpen) return;
-            const t = e.touches[0];
-            const dx = t.clientX - pTouchStartX;
-            const dy = t.clientY - pTouchStartY;
-            if (dx > 30 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-                closeProfile();
-                pIsSwiping = false;
-            }
-        }, { passive: true });
-
-        profilePage.addEventListener('touchend', () => { pIsSwiping = false; }, { passive: true });
-
-        // 鼠标支持
-        let mDownX = 0, mDownY = 0, mDragging = false;
-        chatPage.addEventListener('mousedown', e => {
-            mDownX = e.clientX;
-            mDownY = e.clientY;
-            mDragging = true;
-        });
-        chatPage.addEventListener('mousemove', e => {
-            if (!mDragging) return;
-            const dx = e.clientX - mDownX;
-            const dy = e.clientY - mDownY;
-            if (dx < -30 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-                openProfile();
-                mDragging = false;
-            }
-        });
-        chatPage.addEventListener('mouseup', () => { mDragging = false; });
-        chatPage.addEventListener('mouseleave', () => { mDragging = false; });
-
-        let pMDownX = 0, pMDownY = 0, pMDragging = false;
-        profilePage.addEventListener('mousedown', e => {
-            if (!isOpen) return;
-            pMDownX = e.clientX;
-            pMDownY = e.clientY;
-            pMDragging = true;
-        });
-        profilePage.addEventListener('mousemove', e => {
-            if (!pMDragging || !isOpen) return;
-            const dx = e.clientX - pMDownX;
-            const dy = e.clientY - pMDownY;
-            if (dx > 30 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-                closeProfile();
-                pMDragging = false;
-            }
-        });
-        profilePage.addEventListener('mouseup', () => { pMDragging = false; });
-        profilePage.addEventListener('mouseleave', () => { pMDragging = false; });
-
-        // ============================================================
-        //  2. 纪念日逻辑
+        //  1. 纪念日逻辑
         // ============================================================
         const timeBubble = document.getElementById('timeBubble');
         const timeNumber = document.getElementById('timeNumber');
@@ -1666,7 +1455,7 @@
         });
 
         // ============================================================
-        //  3. 图片/头像上传功能
+        //  2. 图片/头像上传功能
         // ============================================================
         const fileInput = document.getElementById('fileInput');
         let currentTarget = null;
@@ -1734,7 +1523,7 @@
         });
 
         // ============================================================
-        //  4. 背景设置
+        //  3. 背景设置
         // ============================================================
         const bgLayer = document.getElementById('bgLayer');
         const bgFileInput = document.getElementById('bgFileInput');
@@ -1768,7 +1557,7 @@
         });
 
         // ============================================================
-        //  5. 播放按钮
+        //  4. 播放按钮
         // ============================================================
         const playBtn = document.getElementById('playBtn');
         let isPlaying = false;
@@ -1780,7 +1569,7 @@
         });
 
         // ============================================================
-        //  6. 更多按钮
+        //  5. 更多按钮
         // ============================================================
         document.getElementById('postMoreBtn').addEventListener('click', function(e) {
             e.stopPropagation();
@@ -1788,7 +1577,7 @@
         });
 
         // ============================================================
-        //  7. 所有输入框空值保护
+        //  6. 所有输入框空值保护
         // ============================================================
         document.querySelectorAll('input[spellcheck="false"]').forEach(input => {
             const def = input.value;
@@ -1801,15 +1590,9 @@
         });
 
         // ============================================================
-        //  8. 暴露控制台
+        //  7. 控制台提示
         // ============================================================
-        window.openProfile = openProfile;
-        window.closeProfile = closeProfile;
-        window.toggleProfile = function() { isOpen ? closeProfile() : openProfile(); };
-
-        console.log('✅ 侧边个人页已加载');
-        console.log('💡 向左滑动聊天界面 → 打开个人页');
-        console.log('💡 向右滑动个人页 → 关闭');
+        console.log('✅ 个人中心已加载');
         console.log('📅 点击 "纪念日" 气泡设置日期');
         console.log('🖼️ 点击任何图片/头像可上传替换');
 
