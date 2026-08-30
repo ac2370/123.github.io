@@ -27,132 +27,10 @@
         connectingTimer: null,
         randomCallTimer: null,
         isPartnerCall:   false,
-        notificationShown: false,
     };
 
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-    // ========== Service Worker 注册和通知 ==========
-    async function registerServiceWorker() {
-        try {
-            // 检查是否已注册
-            const registrations = await navigator.serviceWorker?.getRegistrations();
-            if (registrations && registrations.length > 0) {
-                // 已有注册，检查是否是我们的
-                for (const reg of registrations) {
-                    if (reg.active && reg.active.scriptURL.includes('call-sw.js')) {
-                        return reg;
-                    }
-                }
-            }
-            
-            // 创建 Service Worker
-            const swCode = `
-                self.addEventListener('install', function(e) {
-                    e.waitUntil(self.skipWaiting());
-                });
-                self.addEventListener('activate', function(e) {
-                    e.waitUntil(self.clients.claim());
-                });
-                self.addEventListener('message', function(e) {
-                    if (e.data && e.data.type === 'SHOW_NOTIFICATION') {
-                        self.registration.showNotification(e.data.title, {
-                            body: e.data.body,
-                            icon: e.data.icon || '/favicon.ico',
-                            tag: 'call-notification',
-                            requireInteraction: true,
-                            data: e.data.url || '/',
-                            actions: [
-                                { action: 'answer', title: '接听' },
-                                { action: 'dismiss', title: '忽略' }
-                            ]
-                        });
-                    }
-                });
-                self.addEventListener('notificationclick', function(e) {
-                    e.notification.close();
-                    if (e.action === 'answer') {
-                        e.waitUntil(clients.openWindow(e.notification.data || '/'));
-                    } else {
-                        e.waitUntil(clients.openWindow(e.notification.data || '/'));
-                    }
-                });
-            `;
-
-            // 使用 Blob 创建 SW
-            const blob = new Blob([swCode], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(blob);
-            
-            // 注册 SW（使用 scope 限制）
-            const registration = await navigator.serviceWorker.register(swUrl, {
-                scope: '/',
-                type: 'classic'
-            });
-            
-            // 等待激活
-            if (registration.installing) {
-                await new Promise(resolve => {
-                    registration.installing.addEventListener('statechange', function() {
-                        if (this.state === 'activated') resolve();
-                    });
-                });
-            }
-            
-            return registration;
-        } catch (err) {
-            console.warn('Service Worker 注册失败:', err);
-            return null;
-        }
-    }
-
-    async function showLockScreenNotification(title, body, url) {
-        try {
-            // 请求通知权限
-            if (Notification.permission === 'default') {
-                await Notification.requestPermission();
-            }
-            
-            if (Notification.permission === 'granted') {
-                // 优先使用 Service Worker
-                const registration = await registerServiceWorker();
-                if (registration) {
-                    // 通过 SW 显示通知
-                    registration.active?.postMessage({
-                        type: 'SHOW_NOTIFICATION',
-                        title: title,
-                        body: body,
-                        url: url || window.location.href,
-                        icon: window.location.origin + '/favicon.ico'
-                    });
-                    return true;
-                }
-                
-                // 降级：直接显示通知
-                const notification = new Notification(title, {
-                    body: body,
-                    icon: '/favicon.ico',
-                    tag: 'call-notification',
-                    requireInteraction: true,
-                    data: url || window.location.href,
-                });
-                
-                notification.onclick = function() {
-                    this.close();
-                    window.focus();
-                    if (this.data) {
-                        window.location.href = this.data;
-                    }
-                };
-                
-                return true;
-            }
-        } catch (err) {
-            console.warn('显示通知失败:', err);
-        }
-        return false;
-    }
-
-    // ========== 原有代码 ==========
     function loadBg() {
         if (!window.localforage) return;
         localforage.getItem(BG_LF_KEY).then(v => { if (v) { S.bgImage = v; applyBg(); } }).catch(() => {});
@@ -702,7 +580,6 @@ html:not([data-theme="dark"])[data-color-theme="black-white"] .message-sent{
         if (!S.enabled) return;
         S.active = true; S.startTime = null; S.elapsed = 0;
         S.minimized = false; S.isPartnerCall = !!isPartner; S.immersive = false;
-        S.notificationShown = false;
         document.getElementById('call-window')?.classList.remove('immersive');
 
         ['call-inc-avatar','call-conn-avatar','call-win-avatar','call-mini-av'].forEach(fillAv);
@@ -760,7 +637,6 @@ html:not([data-theme="dark"])[data-color-theme="black-white"] .message-sent{
         S.active = false; S.startTime = null;
         cancelAnimationFrame(S.timerRAF);
         clearTimeout(S.connectingTimer); clearTimeout(S.incomingTimer);
-        S.notificationShown = false;
 
         ['call-window','call-mini-pill','call-incoming-overlay'].forEach(id => {
             const e = document.getElementById(id);
@@ -790,24 +666,6 @@ html:not([data-theme="dark"])[data-color-theme="black-white"] .message-sent{
         fillAv('call-inc-avatar'); fillNm('call-inc-name');
         ov.classList.add('visible');
         clearTimeout(S.incomingTimer);
-        S.notificationShown = false;
-
-        // ===== 新增：锁屏通知 =====
-        const partnerName = getName();
-        const myName = (typeof settings !== 'undefined' && settings.myName) || '我';
-        const notifTitle = `📞 ${partnerName} 来电`;
-        const notifBody = `${partnerName} 邀请您进行视频通话`;
-
-        // 显示锁屏通知（不阻塞主流程）
-        showLockScreenNotification(notifTitle, notifBody, window.location.href)
-            .then(success => {
-                S.notificationShown = success;
-                if (success) {
-                    // 记录通知已发送（用于调试）
-                    console.log('[Call] 锁屏通知已发送');
-                }
-            })
-            .catch(() => {});
 
         const autoRejectChance = 0.30;
         if (Math.random() < autoRejectChance) {
@@ -815,6 +673,8 @@ html:not([data-theme="dark"])[data-color-theme="black-white"] .message-sent{
             S.incomingTimer = setTimeout(() => {
                 if (!ov.classList.contains('visible')) return;
                 ov.classList.remove('visible');
+                const myName = (typeof settings !== 'undefined' && settings.myName) || '我';
+                const partnerName = getName();
                 const rejectLabels = [
                     `${partnerName} 的来电，${myName}未接听`,
                     `${myName}拒绝了 ${partnerName} 的通话`,
@@ -828,7 +688,8 @@ html:not([data-theme="dark"])[data-color-theme="black-white"] .message-sent{
             S.incomingTimer = setTimeout(() => {
                 if (!ov.classList.contains('visible')) return;
                 ov.classList.remove('visible');
-                sendCallEvent('fa-phone-slash', `${myName}未接听 ${partnerName} 的来电`, null);
+                const myName = (typeof settings !== 'undefined' && settings.myName) || '我';
+                sendCallEvent('fa-phone-slash', `${myName}未接听 ${getName()} 的来电`, null);
             }, 22000);
         }
     }
@@ -1033,39 +894,11 @@ html:not([data-theme="dark"])[data-color-theme="black-white"] .message-sent{
 
     window.callFeature = { startCall, endCall, showIncomingCall, restoreWindow, minimizeWindow };
 
-    // ===== 监听页面可见性变化 =====
-    document.addEventListener('visibilitychange', () => {
-        // 如果页面隐藏且功能启用，确保定时器继续运行
-        if (document.hidden && S.enabled) {
-            // 重新调度随机呼叫（如果当前没有活跃通话）
-            if (!S.active && !S.randomCallTimer) {
-                scheduleRandomCall();
-            }
-        }
-    });
-
-    // ===== 监听页面关闭/刷新 =====
-    window.addEventListener('beforeunload', () => {
-        // 清理所有定时器，防止内存泄漏
-        clearTimeout(S.randomCallTimer);
-        clearTimeout(S.incomingTimer);
-        clearTimeout(S.connectingTimer);
-        cancelAnimationFrame(S.timerRAF);
-    });
-
     function init() {
         injectCSS();
         injectHTML();
         bindEvents();
         loadBg();
-
-        // 预请求通知权限
-        if ('Notification' in window && Notification.permission === 'default') {
-            // 延迟请求权限，不阻塞初始化
-            setTimeout(() => {
-                Notification.requestPermission().catch(() => {});
-            }, 3000);
-        }
 
         const late = () => {
             injectToolbarBtn();
