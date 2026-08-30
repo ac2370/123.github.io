@@ -1,5 +1,7 @@
 // dream-survey.js - 完整梦向问卷系统（含问卷池、多题问卷、回复模拟）
-// 修改说明：所有通过 addMessage 发送的消息都添加 quotable: false，禁止引用
+// 修改说明：
+// 1. 所有通过 addMessage 发送的消息都添加 quotable: false，禁止引用
+// 2. 每日问卷在24小时内随机时间弹出，概率40%
 (function() {
     'use strict';
 
@@ -111,7 +113,6 @@
         return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    // ---------- 修改点：添加 quotable: false ----------
     function _sendAsMessage(text, isSystem) {
         isSystem = isSystem || false;
         if (typeof addMessage === 'function') {
@@ -122,34 +123,35 @@
                 timestamp: new Date(),
                 type: isSystem ? 'system' : 'normal',
                 status: 'sent',
-                quotable: false   // 禁止引用
+                quotable: false
             });
             if (typeof playSound === 'function') playSound('send');
         } else {
             console.warn('[梦向问卷] addMessage 未定义，但已记录:', text);
         }
     }
-    // ------------------------------------------------
 
     function _generateId() {
         return Date.now() + '_' + Math.random().toString(36).substr(2, 6);
     }
 
     // =============================================
-    // 3. 每日随机弹出（触发概率 50%）
+    // 3. 每日随机弹出（概率40%，24小时内随机时间）
     // =============================================
     function _checkDailyPopup() {
         const today = new Date().toDateString();
         const record = _getDailyRecord();
         
+        // 如果今天已经弹过，直接返回
         if (record.lastDate === today) {
             console.log('[梦向问卷] 今天已弹出过，跳过');
             return;
         }
         
-        const PROBABILITY = 0.5;
+        // 概率40%
+        const PROBABILITY = 0.4;
         if (Math.random() > PROBABILITY) {
-            console.log('[梦向问卷] 随机概率未命中（50%），今日不弹出');
+            console.log('[梦向问卷] 随机概率未命中（40%），今日不弹出');
             return;
         }
         
@@ -812,23 +814,30 @@
     }
 
     // =============================================
-    // 11. 初始化
+    // 11. 初始化 - 在24小时内随机时间弹出
     // =============================================
     function _init() {
         console.log('[梦向问卷] 初始化中...');
-        setTimeout(function() {
-            console.log('[梦向问卷] 检查每日弹出（概率50%）...');
-            _checkDailyPopup();
-        }, 3000);
         
+        // 检查今天是否已经弹出过
+        var record = _getDailyRecord();
+        var today = new Date().toDateString();
+        
+        if (record.lastDate === today) {
+            console.log('[梦向问卷] 今天已弹出过，不再安排');
+            return;
+        }
+        
+        // 生成随机延迟时间（0 ~ 24小时，单位毫秒）
+        var randomDelayMs = Math.random() * 24 * 60 * 60 * 1000;
+        var randomHours = (randomDelayMs / (60 * 60 * 1000)).toFixed(1);
+        console.log('[梦向问卷] 将在 ' + randomHours + ' 小时后检查并弹出（概率40%）');
+        
+        // 在随机延迟后执行
         setTimeout(function() {
-            console.log('[梦向问卷] 备用检查每日弹出...');
-            var record = _getDailyRecord();
-            var today = new Date().toDateString();
-            if (record.lastDate !== today) {
-                _checkDailyPopup();
-            }
-        }, 5000);
+            console.log('[梦向问卷] 随机时间已到，开始检查弹出...');
+            _checkDailyPopup();
+        }, randomDelayMs);
     }
 
     if (document.readyState === 'loading') {
@@ -872,5 +881,5 @@
         }
     };
 
-    console.log('[梦向问卷] 完整系统已加载（触发概率50%）。');
+    console.log('[梦向问卷] 完整系统已加载（24小时随机弹出，概率40%）。');
 })();
