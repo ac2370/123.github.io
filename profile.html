@@ -35,8 +35,8 @@
             overflow-y: auto;
             overflow-x: hidden;
             box-shadow: 0 0 40px rgba(0,0,0,0.3);
-            padding: 12px 14px 6px;          /* 底部内边距大幅减少，更紧凑 */
-            padding-top: calc(75px + env(safe-area-inset-top, 20px)); /* 整体下移 */
+            padding: 12px 14px 6px;
+            padding-top: calc(75px + env(safe-area-inset-top, 20px)); /* 卡片整体下移 */
         }
 
         /* ===== 背景层（点击上传） ===== */
@@ -81,28 +81,27 @@
             opacity: 1;
         }
 
-        /* ===== 返回箭头 ===== */
+        /* ===== 返回按钮：圆形，无文字 ===== */
         .back-arrow {
             position: fixed;
-            top: calc(12px + env(safe-area-inset-top, 0px));
+            top: calc(22px + env(safe-area-inset-top, 0px)); /* 下移更多 */
             left: 16px;
             z-index: 100;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
             background: rgba(255,255,255,0.85);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            padding: 8px 12px;
-            border-radius: 24px;
-            text-decoration: none;
-            color: #1a1a1a;
-            font-size: 15px;
-            font-weight: 500;
             border: 1px solid rgba(255,255,255,0.3);
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             transition: transform 0.2s, background 0.2s;
             display: flex;
             align-items: center;
-            gap: 4px;
-            line-height: 1;
+            justify-content: center;
+            text-decoration: none;
+            color: #1a1a1a;
+            cursor: pointer;
         }
         .back-arrow:hover {
             background: rgba(255,255,255,0.95);
@@ -112,8 +111,8 @@
             transform: scale(0.94);
         }
         .back-arrow svg {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             fill: none;
             stroke: currentColor;
             stroke-width: 2.5;
@@ -138,7 +137,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            padding-bottom: 2px;          /* 底部几乎无内边距，让卡片紧贴底部 */
+            padding-bottom: 2px;
         }
 
         /* ===== 顶部用户卡片 ===== */
@@ -891,25 +890,22 @@
             outline: none;
         }
 
-        /* ============================================================
-           底部画廊 —— 四张图片纵向拉长
-           ============================================================ */
+        /* ===== 底部画廊（四张拉长） ===== */
         .gallery-scroll {
             display: flex;
             gap: 14px;
             justify-content: center;
             flex-wrap: nowrap;
-            padding: 4px 0 0;          /* 底部不留内边距，紧贴页面边缘 */
+            padding: 4px 0 0;
             flex-shrink: 0;
         }
         .gallery-scroll::-webkit-scrollbar {
             display: none;
             width: 0;
         }
-
         .gallery-item {
             flex: 0 0 90px;
-            height: 105px;              /* 纵向拉长 */
+            height: 105px;
             background: rgba(0,0,0,0.6);
             border-radius: 10px;
             border: 2px solid rgba(255,255,255,0.6);
@@ -960,6 +956,52 @@
         .gallery-item:nth-child(2) { --g-rot: 4deg; }
         .gallery-item:nth-child(3) { --g-rot: -2deg; }
         .gallery-item:nth-child(4) { --g-rot: 5deg; }
+
+        /* ===== ★ 重新添加“背景设置”按钮 ===== */
+        .bg-set-btn-wrap {
+            display: flex;
+            justify-content: center;
+            margin-top: 4px;
+            padding: 0 0 6px;
+            flex-shrink: 0;
+        }
+        .bg-set-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 20px;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.20);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: rgba(0,0,0,0.55);
+            font-size: 12px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            letter-spacing: 0.3px;
+            user-select: none;
+        }
+        .bg-set-btn:hover {
+            background: rgba(255,255,255,0.35);
+            transform: scale(1.03);
+            color: rgba(0,0,0,0.75);
+        }
+        .bg-set-btn:active {
+            transform: scale(0.94);
+        }
+        .bg-set-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
 
         /* ===== 隐藏输入 ===== */
         .hidden-input {
@@ -1079,7 +1121,7 @@
             color: rgba(0,0,0,0.6);
         }
 
-        /* ===== 响应式适配 ===== */
+        /* ===== 响应式 ===== */
         @media (max-width: 480px) {
             .app-wrapper {
                 max-width: 100%;
@@ -1088,14 +1130,14 @@
                 padding-right: 12px;
             }
             .back-arrow {
-                top: calc(10px + env(safe-area-inset-top, 0px));
+                top: calc(20px + env(safe-area-inset-top, 0px));
                 left: 12px;
-                padding: 6px 10px;
-                font-size: 14px;
+                width: 40px;
+                height: 40px;
             }
             .back-arrow svg {
-                width: 16px;
-                height: 16px;
+                width: 18px;
+                height: 18px;
             }
             .gallery-item {
                 flex: 0 0 78px;
@@ -1154,6 +1196,10 @@
                 height: 14px;
                 font-size: 8px;
             }
+            .bg-set-btn {
+                font-size: 11px;
+                padding: 6px 16px;
+            }
         }
         @media (max-width: 360px) {
             .profile-right {
@@ -1203,15 +1249,14 @@
 </head>
 <body>
 
-<!-- ===== 背景层（点击上传） ===== -->
+<!-- ===== 背景层 ===== -->
 <div class="bg-layer" id="bgLayer">
     <div class="bg-upload-hint">点击背景上传 · 也可用下方按钮</div>
 </div>
 
-<!-- ===== 返回箭头（改为超链接） ===== -->
-<a href="index.html" class="back-arrow" title="返回">
+<!-- ===== 返回按钮：圆形，无文字，使用 history.back() ===== -->
+<a href="javascript:history.back()" class="back-arrow" title="返回">
     <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-    <span style="font-size:14px;">返回</span>
 </a>
 
 <!-- ===== 主容器 ===== -->
@@ -1334,7 +1379,7 @@
             </div>
         </div>
 
-        <!-- ===== 底部画廊（四张图片，纵向拉长） ===== -->
+        <!-- ===== 底部画廊 ===== -->
         <div class="gallery-scroll" id="galleryScroll">
             <div class="gallery-item" data-type="image" title="点击替换图片">
                 <span style="z-index:1;">🖼️</span>
@@ -1354,7 +1399,13 @@
             </div>
         </div>
 
-        <!-- 底部不再放置任何按钮，背景设置完全依赖背景层点击 -->
+        <!-- ===== ★ 背景设置按钮（文字改为“背景设置”） ===== -->
+        <div class="bg-set-btn-wrap">
+            <button class="bg-set-btn" id="bgSetBtn">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                背景设置
+            </button>
+        </div>
 
     </div><!-- /profile-page -->
 </div><!-- /app-wrapper -->
@@ -1565,15 +1616,23 @@
         });
 
         // ============================================================
-        //  3. 背景上传（点击背景层）
+        //  3. 背景上传（点击背景层 或 点击“背景设置”按钮）
         // ============================================================
         const bgLayer = document.getElementById('bgLayer');
         const bgFileInput = document.getElementById('bgFileInput');
+        const bgSetBtn = document.getElementById('bgSetBtn');
 
+        // 点击背景层上传
         bgLayer.addEventListener('click', function(e) {
             if (e.target === this || e.target.closest('.bg-upload-hint')) {
                 bgFileInput.click();
             }
+        });
+
+        // ★ 点击“背景设置”按钮上传（确保响应）
+        bgSetBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            bgFileInput.click();
         });
 
         bgFileInput.addEventListener('change', function() {
@@ -1584,6 +1643,9 @@
                 bgLayer.style.backgroundSize = 'cover';
                 bgLayer.style.backgroundPosition = 'center';
                 bgLayer.classList.add('has-image');
+                // 按钮反馈
+                bgSetBtn.style.transform = 'scale(0.92)';
+                setTimeout(() => bgSetBtn.style.transform = '', 200);
             }).catch(err => {
                 alert('背景图片压缩失败，请重试');
                 console.error(err);
@@ -1624,7 +1686,7 @@
             });
         });
 
-        console.log('✅ 个人中心已加载（底部无重复按钮，卡片已下移，返回超链接）');
+        console.log('✅ 个人中心已加载（返回圆形按钮，背景设置已添加）');
     })();
 </script>
 
