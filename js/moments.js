@@ -290,7 +290,6 @@
         } else {
             post.likes += 1;
             post.likedByMe = true;
-            // 触发群成员点赞（1-3分钟）
             _schedulePartnerInteraction(postId, 'like');
         }
         _setData(data);
@@ -302,11 +301,11 @@
     function _schedulePartnerInteraction(postId, type, commentId) {
         var delay = 0;
         if (type === 'like') {
-            delay = 60000 + Math.random() * 120000; // 1-3分钟
+            delay = 60000 + Math.random() * 120000;
         } else if (type === 'comment') {
-            delay = 180000 + Math.random() * 120000; // 3-5分钟
+            delay = 180000 + Math.random() * 120000;
         } else if (type === 'reply') {
-            delay = 120000 + Math.random() * 120000; // 2-4分钟
+            delay = 120000 + Math.random() * 120000;
         }
         var task = {
             postId: postId,
@@ -328,9 +327,7 @@
         var post = data.posts.find(function(p) { return p.id === task.postId; });
         if (!post) return;
 
-        // 检查是否已被删除或已处理
         if (task.type === 'like') {
-            // 群成员点赞（每个成员最多点一次）
             var members = _getGroupMembers();
             var availableMembers = members.filter(function(m) {
                 return !post.likedByMembers[m.name];
@@ -343,7 +340,6 @@
             _notify('💕 ' + member.name + ' 赞了你的动态', 'info', 3000);
             _refreshUI();
         } else if (task.type === 'comment') {
-            // 群成员评论
             var members2 = _getGroupMembers();
             var availableMembers2 = members2.filter(function(m) {
                 return m.name !== _getMyNameSetting();
@@ -365,7 +361,6 @@
             _notify('💬 ' + member2.name + ' 评论了你的动态', 'info', 3000);
             _refreshUI();
         } else if (task.type === 'reply' && task.commentId) {
-            // 群成员回复评论
             var commentObj = null;
             for (var ci = 0; ci < post.comments.length; ci++) {
                 if (post.comments[ci].id === task.commentId) {
@@ -415,7 +410,6 @@
             return;
         }
 
-        // 检查今天是否已经生成过
         var existingPartnerPosts = data.posts.filter(function(p) { return p.author === 'partner'; });
         var todayPosts = existingPartnerPosts.filter(function(p) {
             return new Date(p.timestamp).toDateString() === today;
@@ -425,29 +419,21 @@
             return;
         }
 
-        // 如果是新的一天，清除旧的partner帖子（保留今天的逻辑，但保留历史记录）
-        if (data.lastGenerateDate !== today) {
-            // 不删除旧帖子，只是标记新的一天
-        }
-
         var activeMembers = members.filter(function(m) { return m.name && m.name.trim(); });
         if (activeMembers.length === 0) return;
 
-        // 每天2-4条
         var count = 2 + Math.floor(Math.random() * 3);
         var now = new Date();
         var todayStart = new Date(now);
         todayStart.setHours(0, 0, 0, 0);
         
-        // 生成随机时间点，确保分布均匀
         var timeSlots = [];
         for (var i = 0; i < count; i++) {
-            var slot = 8 + Math.random() * 12; // 8:00 - 20:00
+            var slot = 8 + Math.random() * 12;
             timeSlots.push(slot);
         }
         timeSlots.sort(function(a, b) { return a - b; });
 
-        // 清除今天已存在的partner帖子，重新生成
         data.posts = data.posts.filter(function(p) {
             if (p.author === 'partner') {
                 return new Date(p.timestamp).toDateString() !== today;
@@ -1028,7 +1014,6 @@
             var text = document.getElementById('reply-text').value.trim();
             if (!text) { _notify('请输入回复内容', 'warning'); return; }
             
-            // 添加我的回复
             var data = _getData();
             var post = data.posts.find(function(p) { return p.id === postId; });
             if (!post) { _notify('帖子不存在', 'error'); return; }
@@ -1036,7 +1021,6 @@
             var comment = post.comments.find(function(c) { return c.id === commentId; });
             if (!comment) { _notify('评论不存在', 'error'); return; }
             
-            // 如果是回复群成员的评论，触发群成员回复
             if (comment.author === 'partner' && !comment.replied) {
                 comment.reply = {
                     text: text,
@@ -1048,13 +1032,10 @@
                 close();
                 _refreshUI();
                 _notify('回复已发送', 'success');
-                
-                // 触发其他群成员回复（2-4分钟）
                 _schedulePartnerInteraction(postId, 'reply', commentId);
                 return;
             }
             
-            // 普通回复逻辑
             comment.reply = {
                 text: text,
                 timestamp: new Date().toISOString(),
@@ -1164,7 +1145,6 @@
 
         container.innerHTML = html;
 
-        // 使用事件委托绑定事件（提高iOS性能）
         container.querySelectorAll('.moments-like-btn').forEach(function(btn) {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -1243,17 +1223,13 @@
             if (container && activeTab) renderTab(activeTab.dataset.tab, container);
             _notify('发布成功 ✨', 'success');
             
-            // 发布后触发群成员互动（评论+点赞）
             var postId = post.id;
-            // 点赞：1-3分钟后
             setTimeout(function() {
                 _schedulePartnerInteraction(postId, 'like');
             }, 60000 + Math.random() * 120000);
-            // 评论：3-5分钟后
             setTimeout(function() {
                 _schedulePartnerInteraction(postId, 'comment');
             }, 180000 + Math.random() * 120000);
-            // 再安排一个额外的评论（不同成员）
             setTimeout(function() {
                 _schedulePartnerInteraction(postId, 'comment');
             }, 240000 + Math.random() * 180000);
@@ -1313,7 +1289,6 @@
             if (container && activeTab) renderTab(activeTab.dataset.tab, container);
             _notify('评论已发送', 'success');
 
-            // 如果是群成员的帖子，触发群成员回复（2-4分钟）
             if (post.author === 'partner') {
                 var commentId = comment.id;
                 setTimeout(function() {
@@ -1324,11 +1299,14 @@
     }
 
     // =============================================
-    // 朋友圈主界面（iOS兼容修复）
+    // 朋友圈主界面（修复：移除重复检查，增加防冲突）
     // =============================================
     window.openMoments = function() {
-        if (document.getElementById('moments-modal')) {
-            return;
+        // 修复：移除 document.getElementById('moments-modal') 的阻塞检查
+        // 改用更安全的方式：如果已存在则先移除再重建
+        var existingModal = document.getElementById('moments-modal');
+        if (existingModal) {
+            existingModal.remove();
         }
 
         _forceGeneratePartnerPosts();
@@ -1503,5 +1481,5 @@
     };
     window.forcePartnerPublish = _forceGeneratePartnerPosts;
 
-    console.log('[朋友圈] 模块已加载（智能互动增强版）');
+    console.log('[朋友圈] 模块已加载（iOS兼容修复版）');
 })();
