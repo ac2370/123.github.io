@@ -44,6 +44,21 @@
         +       '<div class="dm-tile-info"><div class="dm-tile-title">聊天记录</div><div class="dm-tile-desc">消息内容单独备份</div></div>'
         +       '<i class="fas fa-chevron-right dm-tile-arrow"></i>'
         +     '</div>'
+        +     '<div class="dm-tile" id="dm-tile-envelope-backup">'
+        +       '<div class="dm-tile-icon pink"><i class="fas fa-envelope"></i></div>'
+        +       '<div class="dm-tile-info"><div class="dm-tile-title">信封投递</div><div class="dm-tile-desc">所有信件记录</div></div>'
+        +       '<i class="fas fa-chevron-right dm-tile-arrow"></i>'
+        +     '</div>'
+        +     '<div class="dm-tile" id="dm-tile-moments-backup">'
+        +       '<div class="dm-tile-icon purple"><i class="fas fa-images"></i></div>'
+        +       '<div class="dm-tile-info"><div class="dm-tile-title">朋友圈</div><div class="dm-tile-desc">动态与互动记录</div></div>'
+        +       '<i class="fas fa-chevron-right dm-tile-arrow"></i>'
+        +     '</div>'
+        +     '<div class="dm-tile" id="dm-tile-survey-backup">'
+        +       '<div class="dm-tile-icon orange"><i class="fas fa-clipboard-list"></i></div>'
+        +       '<div class="dm-tile-info"><div class="dm-tile-title">梦向问卷</div><div class="dm-tile-desc">问卷池与回答记录</div></div>'
+        +       '<i class="fas fa-chevron-right dm-tile-arrow"></i>'
+        +     '</div>'
         +   '</div>'
 
         +   '<div style="display:none">'
@@ -51,6 +66,12 @@
         +     '<button id="import-all-settings"></button>'
         +     '<button id="export-chat-btn"></button>'
         +     '<button id="import-chat-btn"></button>'
+        +     '<button id="export-envelope-btn"></button>'
+        +     '<button id="import-envelope-btn"></button>'
+        +     '<button id="export-moments-btn"></button>'
+        +     '<button id="import-moments-btn"></button>'
+        +     '<button id="export-survey-btn"></button>'
+        +     '<button id="import-survey-btn"></button>'
         +   '</div>'
 
         +   '<div class="dm-section-label"><i class="fas fa-bell"></i> 通知与关于</div>'
@@ -139,6 +160,75 @@
         +   '</div>'
         + '</div>';
 
+    var DRAWER_ENVELOPE_HTML =
+        '<div class="dm-action-drawer" id="dm-drawer-envelope">'
+        +   '<div class="dm-drawer-backdrop" id="dm-drawer-envelope-backdrop"></div>'
+        +   '<div class="dm-drawer-sheet">'
+        +     '<div class="dm-drawer-handle"></div>'
+        +     '<div class="dm-drawer-title">'
+        +       '<div class="dm-drawer-title-icon" style="background:linear-gradient(135deg,#FF6B8A,#E05070);color:#fff"><i class="fas fa-envelope"></i></div>'
+        +       '<div><div class="dm-drawer-title-text">信封投递</div><div class="dm-drawer-subtitle">所有信件记录</div></div>'
+        +     '</div>'
+        +     '<div class="dm-drawer-actions">'
+        +       '<button class="dm-drawer-action-btn primary" id="export-envelope-btn-real" style="background:linear-gradient(135deg,#FF6B8A,#E05070);border-color:#FF6B8A">'
+        +         '<div class="dm-drawer-btn-icon"><i class="fas fa-download"></i></div>'
+        +         '<div class="dm-drawer-btn-text"><div class="dm-drawer-btn-title">导出信件</div><div class="dm-drawer-btn-desc">将所有信件记录保存为文件</div></div>'
+        +       '</button>'
+        +       '<button class="dm-drawer-action-btn" id="import-envelope-btn-real">'
+        +         '<div class="dm-drawer-btn-icon"><i class="fas fa-upload"></i></div>'
+        +         '<div class="dm-drawer-btn-text"><div class="dm-drawer-btn-title">导入信件</div><div class="dm-drawer-btn-desc">从文件恢复信件记录</div></div>'
+        +       '</button>'
+        +     '</div>'
+        +     '<button class="dm-drawer-cancel" id="dm-drawer-envelope-cancel">取消</button>'
+        +   '</div>'
+        + '</div>';
+
+    var DRAWER_MOMENTS_HTML =
+        '<div class="dm-action-drawer" id="dm-drawer-moments">'
+        +   '<div class="dm-drawer-backdrop" id="dm-drawer-moments-backdrop"></div>'
+        +   '<div class="dm-drawer-sheet">'
+        +     '<div class="dm-drawer-handle"></div>'
+        +     '<div class="dm-drawer-title">'
+        +       '<div class="dm-drawer-title-icon" style="background:linear-gradient(135deg,#9C6FD4,#7A4FB0);color:#fff"><i class="fas fa-images"></i></div>'
+        +       '<div><div class="dm-drawer-title-text">朋友圈</div><div class="dm-drawer-subtitle">动态与互动记录</div></div>'
+        +     '</div>'
+        +     '<div class="dm-drawer-actions">'
+        +       '<button class="dm-drawer-action-btn primary" id="export-moments-btn-real" style="background:linear-gradient(135deg,#9C6FD4,#7A4FB0);border-color:#9C6FD4">'
+        +         '<div class="dm-drawer-btn-icon"><i class="fas fa-download"></i></div>'
+        +         '<div class="dm-drawer-btn-text"><div class="dm-drawer-btn-title">导出朋友圈</div><div class="dm-drawer-btn-desc">将所有动态保存为文件</div></div>'
+        +       '</button>'
+        +       '<button class="dm-drawer-action-btn" id="import-moments-btn-real">'
+        +         '<div class="dm-drawer-btn-icon"><i class="fas fa-upload"></i></div>'
+        +         '<div class="dm-drawer-btn-text"><div class="dm-drawer-btn-title">导入朋友圈</div><div class="dm-drawer-btn-desc">从文件恢复动态记录</div></div>'
+        +       '</button>'
+        +     '</div>'
+        +     '<button class="dm-drawer-cancel" id="dm-drawer-moments-cancel">取消</button>'
+        +   '</div>'
+        + '</div>';
+
+    var DRAWER_SURVEY_HTML =
+        '<div class="dm-action-drawer" id="dm-drawer-survey">'
+        +   '<div class="dm-drawer-backdrop" id="dm-drawer-survey-backdrop"></div>'
+        +   '<div class="dm-drawer-sheet">'
+        +     '<div class="dm-drawer-handle"></div>'
+        +     '<div class="dm-drawer-title">'
+        +       '<div class="dm-drawer-title-icon" style="background:linear-gradient(135deg,#FF9F0A,#E08000);color:#fff"><i class="fas fa-clipboard-list"></i></div>'
+        +       '<div><div class="dm-drawer-title-text">梦向问卷</div><div class="dm-drawer-subtitle">问卷池与回答记录</div></div>'
+        +     '</div>'
+        +     '<div class="dm-drawer-actions">'
+        +       '<button class="dm-drawer-action-btn primary" id="export-survey-btn-real" style="background:linear-gradient(135deg,#FF9F0A,#E08000);border-color:#FF9F0A">'
+        +         '<div class="dm-drawer-btn-icon"><i class="fas fa-download"></i></div>'
+        +         '<div class="dm-drawer-btn-text"><div class="dm-drawer-btn-title">导出问卷</div><div class="dm-drawer-btn-desc">将所有问卷数据保存为文件</div></div>'
+        +       '</button>'
+        +       '<button class="dm-drawer-action-btn" id="import-survey-btn-real">'
+        +         '<div class="dm-drawer-btn-icon"><i class="fas fa-upload"></i></div>'
+        +         '<div class="dm-drawer-btn-text"><div class="dm-drawer-btn-title">导入问卷</div><div class="dm-drawer-btn-desc">从文件恢复问卷数据</div></div>'
+        +       '</button>'
+        +     '</div>'
+        +     '<button class="dm-drawer-cancel" id="dm-drawer-survey-cancel">取消</button>'
+        +   '</div>'
+        + '</div>';
+
     function isCorrect(mc) {
         return mc.querySelector('.dm-topbar') !== null
             && mc.querySelector('.dm-storage-card') !== null
@@ -147,7 +237,14 @@
     }
 
     function ensureDrawersOnBody() {
-        var DRAWER_IDS = ['dm-drawer-full', 'dm-drawer-chat'];
+        var DRAWER_IDS = ['dm-drawer-full', 'dm-drawer-chat', 'dm-drawer-envelope', 'dm-drawer-moments', 'dm-drawer-survey'];
+        var DRAWER_HTMLS = {
+            'dm-drawer-full': DRAWER_FULL_HTML,
+            'dm-drawer-chat': DRAWER_CHAT_HTML,
+            'dm-drawer-envelope': DRAWER_ENVELOPE_HTML,
+            'dm-drawer-moments': DRAWER_MOMENTS_HTML,
+            'dm-drawer-survey': DRAWER_SURVEY_HTML
+        };
         DRAWER_IDS.forEach(function(id) {
             var existing = document.getElementById(id);
             if (existing && existing.parentElement === document.body) return;
@@ -156,9 +253,9 @@
                 return;
             }
             var dummy = document.createElement('div');
-            if (id === 'dm-drawer-full') dummy.innerHTML = DRAWER_FULL_HTML;
-            else dummy.innerHTML = DRAWER_CHAT_HTML;
-            document.body.appendChild(dummy.firstElementChild);
+            dummy.innerHTML = DRAWER_HTMLS[id] || '';
+            var child = dummy.firstElementChild;
+            if (child) document.body.appendChild(child);
         });
     }
 
@@ -258,6 +355,77 @@
         document.body.style.overflow = '';
     }
 
+    // =============================================
+    // 通用导出/导入函数
+    // =============================================
+    function exportData(key, fileName, label) {
+        try {
+            var data = localStorage.getItem(key);
+            if (!data) {
+                if (typeof showNotification === 'function') {
+                    showNotification('暂无' + label + '数据可导出', 'warning');
+                } else {
+                    alert('暂无' + label + '数据可导出');
+                }
+                return;
+            }
+            var blob = new Blob([data], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = fileName + '_' + new Date().toISOString().slice(0,10) + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            if (typeof showNotification === 'function') {
+                showNotification(label + '导出成功 ✨', 'success');
+            }
+        } catch(e) {
+            if (typeof showNotification === 'function') {
+                showNotification('导出失败: ' + e.message, 'error');
+            } else {
+                alert('导出失败: ' + e.message);
+            }
+        }
+    }
+
+    function importData(key, label, callback) {
+        var inp = document.createElement('input');
+        inp.type = 'file';
+        inp.accept = '.json';
+        inp.onchange = function(e) {
+            var file = e.target.files && e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    var data = ev.target.result;
+                    // 验证是否为有效 JSON
+                    JSON.parse(data);
+                    localStorage.setItem(key, data);
+                    if (typeof callback === 'function') callback();
+                    if (typeof showNotification === 'function') {
+                        showNotification(label + '导入成功 ✨', 'success');
+                    } else {
+                        alert(label + '导入成功');
+                    }
+                } catch(err) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('文件格式错误，请选择有效的 ' + label + ' 备份文件', 'error');
+                    } else {
+                        alert('文件格式错误');
+                    }
+                }
+            };
+            reader.readAsText(file);
+        };
+        inp.click();
+    }
+
+    // =============================================
+    // 绑定所有事件
+    // =============================================
     function bindAll(mc) {
         var closeBtn = mc.querySelector('#close-data');
         if (closeBtn) closeBtn.addEventListener('click', function () {
@@ -273,12 +441,29 @@
             if (settingsModal && typeof showModal === 'function') showModal(settingsModal);
         });
 
+        // 全量备份
         var tileFullBackup = mc.querySelector('#dm-tile-full-backup');
         if (tileFullBackup) tileFullBackup.addEventListener('click', function () { openDrawer('dm-drawer-full'); });
 
+        // 聊天记录
         var tileChatBackup = mc.querySelector('#dm-tile-chat-backup');
         if (tileChatBackup) tileChatBackup.addEventListener('click', function () { openDrawer('dm-drawer-chat'); });
 
+        // 信封投递
+        var tileEnvelopeBackup = mc.querySelector('#dm-tile-envelope-backup');
+        if (tileEnvelopeBackup) tileEnvelopeBackup.addEventListener('click', function () { openDrawer('dm-drawer-envelope'); });
+
+        // 朋友圈
+        var tileMomentsBackup = mc.querySelector('#dm-tile-moments-backup');
+        if (tileMomentsBackup) tileMomentsBackup.addEventListener('click', function () { openDrawer('dm-drawer-moments'); });
+
+        // 梦向问卷
+        var tileSurveyBackup = mc.querySelector('#dm-tile-survey-backup');
+        if (tileSurveyBackup) tileSurveyBackup.addEventListener('click', function () { openDrawer('dm-drawer-survey'); });
+
+        // =============================================
+        // 全量备份抽屉
+        // =============================================
         var fullDrawer = document.getElementById('dm-drawer-full');
         if (fullDrawer) {
             var backdrop1 = fullDrawer.querySelector('#dm-drawer-full-backdrop');
@@ -303,6 +488,9 @@
             });
         }
 
+        // =============================================
+        // 聊天记录抽屉
+        // =============================================
         var chatDrawer = document.getElementById('dm-drawer-chat');
         if (chatDrawer) {
             var backdrop2 = chatDrawer.querySelector('#dm-drawer-chat-backdrop');
@@ -327,10 +515,148 @@
             });
         }
 
+        // =============================================
+        // 信封投递抽屉
+        // =============================================
+        var envelopeDrawer = document.getElementById('dm-drawer-envelope');
+        if (envelopeDrawer) {
+            var backdropEnv = envelopeDrawer.querySelector('#dm-drawer-envelope-backdrop');
+            if (backdropEnv) backdropEnv.addEventListener('click', function () { closeDrawer('dm-drawer-envelope'); });
+            var cancelBtnEnv = envelopeDrawer.querySelector('#dm-drawer-envelope-cancel');
+            if (cancelBtnEnv) cancelBtnEnv.addEventListener('click', function () { closeDrawer('dm-drawer-envelope'); });
+            var exportEnvReal = envelopeDrawer.querySelector('#export-envelope-btn-real');
+            if (exportEnvReal) exportEnvReal.addEventListener('click', function () {
+                closeDrawer('dm-drawer-envelope');
+                exportData('envelope_data', '信封投递_备份', '信封投递');
+            });
+            var importEnvReal = envelopeDrawer.querySelector('#import-envelope-btn-real');
+            if (importEnvReal) importEnvReal.addEventListener('click', function () {
+                closeDrawer('dm-drawer-envelope');
+                importData('envelope_data', '信封投递', function() {
+                    // 导入后刷新信封界面
+                    if (typeof window.renderEnvelopeList === 'function') {
+                        setTimeout(window.renderEnvelopeList, 300);
+                    }
+                });
+            });
+        }
+
+        // =============================================
+        // 朋友圈抽屉
+        // =============================================
+        var momentsDrawer = document.getElementById('dm-drawer-moments');
+        if (momentsDrawer) {
+            var backdropMom = momentsDrawer.querySelector('#dm-drawer-moments-backdrop');
+            if (backdropMom) backdropMom.addEventListener('click', function () { closeDrawer('dm-drawer-moments'); });
+            var cancelBtnMom = momentsDrawer.querySelector('#dm-drawer-moments-cancel');
+            if (cancelBtnMom) cancelBtnMom.addEventListener('click', function () { closeDrawer('dm-drawer-moments'); });
+            var exportMomReal = momentsDrawer.querySelector('#export-moments-btn-real');
+            if (exportMomReal) exportMomReal.addEventListener('click', function () {
+                closeDrawer('dm-drawer-moments');
+                exportData('moments_data', '朋友圈_备份', '朋友圈');
+            });
+            var importMomReal = momentsDrawer.querySelector('#import-moments-btn-real');
+            if (importMomReal) importMomReal.addEventListener('click', function () {
+                closeDrawer('dm-drawer-moments');
+                importData('moments_data', '朋友圈', function() {
+                    // 导入后刷新朋友圈界面
+                    if (typeof window.renderMoments === 'function') {
+                        setTimeout(window.renderMoments, 300);
+                    }
+                });
+            });
+        }
+
+        // =============================================
+        // 梦向问卷抽屉
+        // =============================================
+        var surveyDrawer = document.getElementById('dm-drawer-survey');
+        if (surveyDrawer) {
+            var backdropSur = surveyDrawer.querySelector('#dm-drawer-survey-backdrop');
+            if (backdropSur) backdropSur.addEventListener('click', function () { closeDrawer('dm-drawer-survey'); });
+            var cancelBtnSur = surveyDrawer.querySelector('#dm-drawer-survey-cancel');
+            if (cancelBtnSur) cancelBtnSur.addEventListener('click', function () { closeDrawer('dm-drawer-survey'); });
+            var exportSurReal = surveyDrawer.querySelector('#export-survey-btn-real');
+            if (exportSurReal) exportSurReal.addEventListener('click', function () {
+                closeDrawer('dm-drawer-survey');
+                // 导出所有问卷相关数据
+                var surveyData = {};
+                var keys = ['dreamSurvey_questionnaires', 'dreamSurvey_history', 'dreamSurvey_daily', 'dreamSurvey_custom_list'];
+                keys.forEach(function(k) {
+                    var val = localStorage.getItem(k);
+                    if (val) surveyData[k] = val;
+                });
+                if (Object.keys(surveyData).length === 0) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('暂无问卷数据可导出', 'warning');
+                    } else {
+                        alert('暂无问卷数据可导出');
+                    }
+                    return;
+                }
+                var blob = new Blob([JSON.stringify(surveyData, null, 2)], { type: 'application/json' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = '梦向问卷_备份_' + new Date().toISOString().slice(0,10) + '.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                if (typeof showNotification === 'function') {
+                    showNotification('问卷数据导出成功 ✨', 'success');
+                }
+            });
+            var importSurReal = surveyDrawer.querySelector('#import-survey-btn-real');
+            if (importSurReal) importSurReal.addEventListener('click', function () {
+                closeDrawer('dm-drawer-survey');
+                var inp = document.createElement('input');
+                inp.type = 'file';
+                inp.accept = '.json';
+                inp.onchange = function(e) {
+                    var file = e.target.files && e.target.files[0];
+                    if (!file) return;
+                    var reader = new FileReader();
+                    reader.onload = function(ev) {
+                        try {
+                            var data = JSON.parse(ev.target.result);
+                            var keys = ['dreamSurvey_questionnaires', 'dreamSurvey_history', 'dreamSurvey_daily', 'dreamSurvey_custom_list'];
+                            var count = 0;
+                            keys.forEach(function(k) {
+                                if (data[k]) {
+                                    localStorage.setItem(k, data[k]);
+                                    count++;
+                                }
+                            });
+                            if (typeof showNotification === 'function') {
+                                showNotification('问卷数据导入成功，已恢复 ' + count + ' 项数据 ✨', 'success');
+                            } else {
+                                alert('导入成功，已恢复 ' + count + ' 项数据');
+                            }
+                            // 刷新问卷界面
+                            if (typeof window.renderQuestionnaireList === 'function') {
+                                setTimeout(window.renderQuestionnaireList, 300);
+                            }
+                        } catch(err) {
+                            if (typeof showNotification === 'function') {
+                                showNotification('文件格式错误，请选择有效的问卷备份文件', 'error');
+                            } else {
+                                alert('文件格式错误');
+                            }
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                inp.click();
+            });
+        }
+
+        // =============================================
+        // 危险操作
+        // =============================================
         var clearChatBtn = mc.querySelector('#clear-chat-only');
         if (clearChatBtn) clearChatBtn.addEventListener('click', function () {
             if (!confirm('确定要清除当前会话的所有消息吗？\n\n所有设置、头像、字卡等数据将保留，仅聊天记录会被删除。\n\n此操作无法恢复！')) return;
-            // 修复：直接赋值 let messages（window.messages 赋值不影响 let 绑定）
             messages = [];
             displayedMessageCount = typeof HISTORY_BATCH_SIZE !== 'undefined' ? HISTORY_BATCH_SIZE : 20;
             try { localStorage.removeItem('BACKUP_V1_critical'); } catch(e) {}
@@ -355,6 +681,9 @@
             window.localforage ? localforage.clear().then(doReset).catch(doReset) : doReset();
         });
 
+        // =============================================
+        // 其他功能
+        // =============================================
         var exportAll = mc.querySelector('#export-all-settings');
         if (exportAll) exportAll.addEventListener('click', function () {
             if (typeof exportAllData === 'function') exportAllData();
