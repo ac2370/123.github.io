@@ -7,9 +7,6 @@
     var MAX_POSTS = 100;
     var INTERACTION_QUEUE = [];
 
-    // =============================================
-    // 工具函数
-    // =============================================
     function _getReplyCards() {
         var cards = [];
         if (window.customReplies && Array.isArray(window.customReplies)) {
@@ -147,9 +144,6 @@
     function _setCoverImage(data) { localStorage.setItem(COVER_KEY, data); }
     function _clearCoverImage() { localStorage.removeItem(COVER_KEY); }
 
-    // =============================================
-    // 头像与昵称管理
-    // =============================================
     var MY_NAME_KEY = 'moments_my_name';
     var MY_AVATAR_KEY = 'moments_my_avatar';
 
@@ -236,9 +230,6 @@
         _setData(data);
     }
 
-    // =============================================
-    // 数据管理
-    // =============================================
     function _getData() {
         try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { posts: [], lastGenerateDate: '' }; } catch { return { posts: [], lastGenerateDate: '' }; }
     }
@@ -294,9 +285,6 @@
         _setData(data);
     }
 
-    // =============================================
-    // 智能互动调度器
-    // =============================================
     function _schedulePartnerInteraction(postId, type, commentId) {
         var delay = 0;
         if (type === 'like') {
@@ -393,9 +381,6 @@
         if (container && activeTab) renderTab(activeTab.dataset.tab, container);
     }
 
-    // =============================================
-    // 对方发布朋友圈
-    // =============================================
     function _forceGeneratePartnerPosts() {
         var data = _getData();
         var today = new Date().toDateString();
@@ -454,9 +439,6 @@
         _setData(data);
     }
 
-    // =============================================
-    // 手动触发群成员互动
-    // =============================================
     window.triggerPartnerInteraction = function(postId, type) {
         _schedulePartnerInteraction(postId, type);
     };
@@ -467,9 +449,6 @@
         _notify('已生成今日动态', 'success');
     };
 
-    // =============================================
-    // 时间格式化
-    // =============================================
     function formatTime(iso) {
         var date = new Date(iso);
         var now = new Date();
@@ -481,9 +460,6 @@
         return date.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' + date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     }
 
-    // =============================================
-    // 封面设置弹窗
-    // =============================================
     function showCoverSettings() {
         var old = document.getElementById('cover-settings-modal');
         if (old) old.remove();
@@ -491,7 +467,6 @@
         var wrap = document.createElement('div');
         wrap.id = 'cover-settings-modal';
         wrap.style.cssText = 'position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
-        // 移除 backdrop-filter 避免 iOS 兼容问题
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
@@ -603,9 +578,6 @@
         }
     }
 
-    // =============================================
-    // 头像与昵称管理面板
-    // =============================================
     function showAvatarSettings() {
         var old = document.getElementById('avatar-settings-modal');
         if (old) old.remove();
@@ -613,7 +585,6 @@
         var wrap = document.createElement('div');
         wrap.id = 'avatar-settings-modal';
         wrap.style.cssText = 'position:fixed;inset:0;z-index:10055;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
-        // 移除 backdrop-filter
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:20px;width:min(400px, 92vw);max-height:85vh;overflow-y:auto;border:1px solid var(--border-color);';
@@ -677,9 +648,6 @@
         wrap.onclick = function(e) { if (e.target === wrap) wrap.remove(); };
     }
 
-    // =============================================
-    // 编辑我的信息
-    // =============================================
     function editMyInfo() {
         var old = document.getElementById('edit-my-modal');
         if (old) old.remove();
@@ -690,7 +658,6 @@
         var wrap = document.createElement('div');
         wrap.id = 'edit-my-modal';
         wrap.style.cssText = 'position:fixed;inset:0;z-index:10056;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
-        // 移除 backdrop-filter
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
@@ -772,9 +739,6 @@
         };
     }
 
-    // =============================================
-    // 编辑成员
-    // =============================================
     function editMember(name) {
         var old = document.getElementById('edit-member-modal');
         if (old) old.remove();
@@ -789,7 +753,6 @@
         var wrap = document.createElement('div');
         wrap.id = 'edit-member-modal';
         wrap.style.cssText = 'position:fixed;inset:0;z-index:10057;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
-        // 移除 backdrop-filter
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
@@ -874,9 +837,6 @@
         };
     }
 
-    // =============================================
-    // 添加成员
-    // =============================================
     function addMember() {
         var old = document.getElementById('add-member-modal');
         if (old) old.remove();
@@ -884,7 +844,6 @@
         var wrap = document.createElement('div');
         wrap.id = 'add-member-modal';
         wrap.style.cssText = 'position:fixed;inset:0;z-index:10058;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
-        // 移除 backdrop-filter
 
         var inner = document.createElement('div');
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);max-height:90vh;overflow-y:auto;';
@@ -970,9 +929,6 @@
         };
     }
 
-    // =============================================
-    // 删除成员
-    // =============================================
     function removeMember(name) {
         if (!confirm('确定要删除成员 "' + name + '" 吗？\n该成员的所有动态也将被删除。')) return;
         _removeGroupMember(name);
@@ -985,9 +941,6 @@
         _notify('成员已删除', 'info');
     }
 
-    // =============================================
-    // 回复弹窗
-    // =============================================
     function showReplyModal(postId, commentId) {
         var old = document.getElementById('reply-modal');
         if (old) old.remove();
@@ -1053,9 +1006,6 @@
         };
     }
 
-    // =============================================
-    // 渲染Tab内容
-    // =============================================
     function renderTab(tab, container) {
         var posts = _getPosts();
         var filtered = [];
@@ -1149,7 +1099,6 @@
 
         container.innerHTML = html;
 
-        // 使用事件委托提高移动端性能
         container.querySelectorAll('.moments-like-btn').forEach(function(btn) {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -1191,7 +1140,6 @@
         });
     }
 
-    // 发布新动态
     function showPublishModal() {
         var old = document.getElementById('publish-modal');
         if (old) old.remove();
@@ -1241,7 +1189,6 @@
         };
     }
 
-    // 评论弹窗
     function showCommentModal(postId) {
         var old = document.getElementById('comment-modal');
         if (old) old.remove();
@@ -1307,7 +1254,6 @@
     // 朋友圈主界面 - 手机端全面兼容
     // =============================================
     window.openMoments = function() {
-        // 移除已存在的弹窗
         var existingModal = document.getElementById('moments-modal');
         if (existingModal) {
             existingModal.remove();
@@ -1317,11 +1263,9 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'moments-modal';
-        // 使用更简单的背景，移除 backdrop-filter 避免 iOS 兼容问题
         wrap.style.cssText = 'position:fixed;inset:0;z-index:10010;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
 
         var inner = document.createElement('div');
-        // 使用简单样式，避免 iOS 渲染问题
         inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:0;width:min(460px, 94vw);max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);border:1px solid var(--border-color);';
 
         var coverUrl = _getCoverImage();
@@ -1401,7 +1345,6 @@
 
         var contentContainer = document.createElement('div');
         contentContainer.id = 'moments-content';
-        // 添加 -webkit-overflow-scrolling 提升 iOS 滚动体验
         contentContainer.style.cssText = 'flex:1;overflow-y:auto;padding:12px 16px 16px;background:var(--secondary-bg);-webkit-overflow-scrolling:touch;';
 
         renderTab('me', contentContainer);
@@ -1421,14 +1364,12 @@
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
 
-        // 点击背景关闭
         wrap.addEventListener('click', function(e) {
             if (e.target === wrap) {
                 wrap.remove();
             }
         });
 
-        // Tab 切换
         tabBar.querySelectorAll('.moments-tab').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 tabBar.querySelectorAll('.moments-tab').forEach(function(b) {
@@ -1448,15 +1389,11 @@
             });
         });
 
-        // iOS 滚动优化
         contentContainer.addEventListener('touchmove', function(e) {
             e.stopPropagation();
         }, { passive: true });
     };
 
-    // =============================================
-    // 暴露到全局
-    // =============================================
     window.openMoments = window.openMoments;
     window.showAvatarSettings = showAvatarSettings;
     window.editMyInfo = editMyInfo;
