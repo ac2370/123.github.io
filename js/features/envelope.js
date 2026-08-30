@@ -1,5 +1,5 @@
 // =============================================
-// 信封投递 + 时空来信功能
+// 信封投递 + 时空来信功能（修改版）
 // =============================================
 
 var envelopeData = { outbox: [], inbox: [] };
@@ -64,8 +64,11 @@ function _getReplyCardsForTimemail() {
 var PUNCTUATIONS = ['，', '。', '？', '！', '...', '、', '；'];
 var GROUP_MEMBERS = ['沈星回', '陆沉'];
 
-function _getRandomGroupMember() {
-    var members = GROUP_MEMBERS.slice();
+// =============================================
+// 获取群成员列表（用于随机落款）
+// =============================================
+function _getGroupMemberList() {
+    var members = [];
     try {
         var groupData = JSON.parse(localStorage.getItem('group_chat_data') || '{}');
         if (groupData.members && groupData.members.length > 0) {
@@ -77,18 +80,47 @@ function _getRandomGroupMember() {
             }
         }
     } catch(e) {}
-    try {
-        var storedMembers = localStorage.getItem('groupMembers');
-        if (storedMembers) {
-            var parsed = JSON.parse(storedMembers);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                members = parsed;
+    if (members.length === 0) {
+        try {
+            var storedMembers = localStorage.getItem('groupMembers');
+            if (storedMembers) {
+                var parsed = JSON.parse(storedMembers);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    members = parsed.map(function(m) {
+                        return typeof m === 'string' ? m : (m.name || m);
+                    }).filter(function(n) { return n && n.trim(); });
+                }
             }
-        }
-    } catch(e) {}
+        } catch(e) {}
+    }
+    if (members.length === 0) {
+        members = GROUP_MEMBERS.slice();
+    }
+    return members;
+}
+
+function _getRandomGroupMember() {
+    var members = _getGroupMemberList();
     return members[Math.floor(Math.random() * members.length)];
 }
 
+// =============================================
+// 获取我方名称（用于"致..."）
+// =============================================
+function _getMyNameForLetter() {
+    try {
+        if (typeof settings !== 'undefined' && settings.myName) {
+            return settings.myName;
+        }
+    } catch(e) {}
+    var stored = localStorage.getItem('moments_my_name');
+    if (stored) return stored;
+    return '阿晏';
+}
+
+// =============================================
+// 生成时空来信内容
+// =============================================
 function _generateTimemail() {
     var cards = _getReplyCardsForTimemail();
     if (cards.length < 2) {
@@ -252,6 +284,7 @@ function viewTimemail(id) {
     var inner = document.createElement('div');
     inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:28px 24px;width:min(400px, 90vw);max-height:70vh;overflow-y:auto;border:1px solid var(--border-color);';
     var pName = _getRandomGroupMember();
+    var myName = _getMyNameForLetter();
     var date = new Date(letter.timestamp);
     var dateStr = date.getFullYear() + '年' + String(date.getMonth() + 1).padStart(2, '0') + '月' + String(date.getDate()).padStart(2, '0') + '日';
     var weekdays = ['日', '一', '二', '三', '四', '五', '六'];
@@ -273,12 +306,14 @@ function viewTimemail(id) {
         '</div>' +
         '<div style="padding:16px 4px 12px;background:var(--primary-bg);border-radius:0 0 12px 12px;border:1px solid var(--border-color);border-top:none;">' +
         '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;letter-spacing:1px;">' + dateStr + ' 星期' + weekdayStr + '</div>' +
-        '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;font-style:italic;">致 ' + _escHtml(pName) + '，</div>' +
+        // 修改：致... 固定为"阿晏"（我方名称）
+        '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;font-style:italic;">致 ' + _escHtml(myName) + '，</div>' +
         '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;font-style:italic;">见字如面，望君安好。</div>' +
         '<div style="padding:8px 0 12px;border-top:1px dashed rgba(var(--border-color-rgb),0.3);margin-bottom:8px;">' +
         contentHtml +
         '</div>' +
         '<div style="text-align:right;font-size:12px;color:var(--text-secondary);margin-top:8px;">' + dateStr + '</div>' +
+        // 修改：落款从群成员中随机生成
         '<div style="text-align:right;font-size:14px;color:var(--accent-color);font-weight:600;letter-spacing:1px;">' + _escHtml(pName) + '</div>' +
         '</div>' +
         '<div style="display:flex;gap:8px;margin-top:12px;">' +
@@ -626,12 +661,16 @@ function viewEnvLetter(section, id) {
     if (dateLine) dateLine.textContent = fullDateStr;
     var toLine = document.getElementById('env-view-to-line');
     var greetingLine = document.getElementById('env-view-greeting-line');
+    
+    // 修改：获取我方名称用于"致..."
+    var myName = _getMyNameForLetter();
+    
     if (section === 'outbox') {
         var partnerName = (typeof settings !== 'undefined' && settings.partnerName) || '亲爱的';
         if (toLine) toLine.textContent = '致 ' + partnerName + '：';
         if (greetingLine) greetingLine.textContent = '见字如面，望君安好。';
     } else {
-        var myName = (typeof settings !== 'undefined' && settings.myName) || '你';
+        // 收到的信：致... 使用我方名称
         if (toLine) toLine.textContent = '致 ' + myName + '：';
         if (greetingLine) greetingLine.textContent = '见字如面，一切皆好。';
     }
@@ -644,8 +683,9 @@ function viewEnvLetter(section, id) {
         var myName2 = (typeof settings !== 'undefined' && settings.myName) || '你';
         if (signNameEl) signNameEl.textContent = myName2;
     } else {
-        var partnerName2 = (typeof settings !== 'undefined' && settings.partnerName) || '对方';
-        if (signNameEl) signNameEl.textContent = partnerName2;
+        // 收到的信：落款从群成员中随机生成
+        var randomMember = _getRandomGroupMember();
+        if (signNameEl) signNameEl.textContent = randomMember;
     }
     document.getElementById('env-edit-input').value = letter.content;
     document.getElementById('env-view-content').style.display = 'block';
@@ -919,4 +959,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 800);
 });
 
-console.log('[信封投递] 时空来信功能已加载');
+console.log('[信封投递] 时空来信功能已加载（修改版：致=阿晏，落款=群成员随机）');
