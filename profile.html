@@ -6,7 +6,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>个人中心</title>
-    <!-- 确保没有任何 prefetch/preload 链接 -->
     <style>
         /* ===== 全局重置 ===== */
         * {
@@ -19,7 +18,7 @@
             width: 100%;
             min-height: 100vh;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #1a1a1a;
+            background: #F5F5F5;         /* 跟随系统风格 */
             display: flex;
             justify-content: center;
             align-items: flex-start;
@@ -35,85 +34,46 @@
             position: relative;
             overflow-y: auto;
             overflow-x: hidden;
-            box-shadow: 0 0 40px rgba(0,0,0,0.3);
-            padding: 12px 14px 6px;
-            padding-top: calc(75px + env(safe-area-inset-top, 20px));
+            display: flex;
+            align-items: center;          /* 垂直居中 */
+            justify-content: center;
+            padding: 20px 14px 20px;      /* 上下留白均衡 */
+            padding-top: calc(60px + env(safe-area-inset-top, 10px)); /* 为圆形返回按钮留出空间 */
+            padding-bottom: calc(20px + env(safe-area-inset-bottom, 10px));
         }
 
-        /* ===== 背景层（点击上传） ===== */
-        .bg-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 0;
-            background: #F5F5F5;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            transition: background 0.5s ease;
-            pointer-events: auto;
-            cursor: pointer;
-        }
-        .bg-layer.has-image {
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-        .bg-upload-hint {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(255,255,255,0.5);
-            font-size: 12px;
-            background: rgba(0,0,0,0.2);
-            padding: 6px 16px;
-            border-radius: 20px;
-            backdrop-filter: blur(4px);
-            pointer-events: none;
-            white-space: nowrap;
-            letter-spacing: 0.5px;
-            opacity: 0.7;
-            transition: opacity 0.3s;
-        }
-        .bg-layer:hover .bg-upload-hint {
-            opacity: 1;
-        }
-
-        /* ===== 返回按钮：圆形，使用 history.back() ===== */
+        /* ===== 返回按钮（圆形，仅箭头） ===== */
         .back-arrow {
             position: fixed;
-            top: calc(22px + env(safe-area-inset-top, 0px));
+            top: calc(20px + env(safe-area-inset-top, 0px)); /* 下移 */
             left: 16px;
             z-index: 100;
-            width: 44px;
-            height: 44px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.85);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: transform 0.2s, background 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
             text-decoration: none;
-            color: #1a1a1a;
+            transition: transform 0.2s, background 0.2s;
             cursor: pointer;
+            color: #1a1a1a;
         }
         .back-arrow:hover {
-            background: rgba(255,255,255,0.95);
+            background: rgba(255, 255, 255, 0.95);
             transform: scale(1.04);
         }
         .back-arrow:active {
-            transform: scale(0.94);
+            transform: scale(0.92);
         }
         .back-arrow svg {
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             fill: none;
             stroke: currentColor;
             stroke-width: 2.5;
@@ -130,6 +90,7 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
         }
 
         .profile-page {
@@ -138,14 +99,15 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            padding-bottom: 2px;
+            width: 100%;
+            max-width: 100%;
+            margin: auto 0;              /* 垂直方向自动居中 */
         }
 
         /* ===== 顶部用户卡片 ===== */
         .user-profile-card {
             border-radius: 16px;
             padding: 12px 14px 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -304,7 +266,6 @@
         .core-interaction {
             border-radius: 16px;
             padding: 10px 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -481,7 +442,6 @@
         .play-follow-row {
             border-radius: 16px;
             padding: 10px 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -612,7 +572,6 @@
         .post-card {
             border-radius: 16px;
             padding: 12px 14px 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
             flex-shrink: 0;
         }
         .post-header {
@@ -891,22 +850,25 @@
             outline: none;
         }
 
-        /* ===== 底部画廊（四张拉长） ===== */
+        /* ============================================================
+           底部画廊 —— 四张图片纵向拉长（高度 105px）
+           ============================================================ */
         .gallery-scroll {
             display: flex;
             gap: 14px;
             justify-content: center;
             flex-wrap: nowrap;
-            padding: 4px 0 0;
+            padding: 4px 0 2px;
             flex-shrink: 0;
         }
         .gallery-scroll::-webkit-scrollbar {
             display: none;
             width: 0;
         }
+
         .gallery-item {
             flex: 0 0 90px;
-            height: 105px;
+            height: 105px;             /* 拉长 */
             background: rgba(0,0,0,0.6);
             border-radius: 10px;
             border: 2px solid rgba(255,255,255,0.6);
@@ -958,53 +920,7 @@
         .gallery-item:nth-child(3) { --g-rot: -2deg; }
         .gallery-item:nth-child(4) { --g-rot: 5deg; }
 
-        /* ===== ★ 背景设置按钮（文字“背景设置”） ===== */
-        .bg-set-btn-wrap {
-            display: flex;
-            justify-content: center;
-            margin-top: 4px;
-            padding: 0 0 6px;
-            flex-shrink: 0;
-        }
-        .bg-set-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 7px 20px;
-            border-radius: 24px;
-            border: 1px solid rgba(255,255,255,0.25);
-            background: rgba(255,255,255,0.20);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            color: rgba(0,0,0,0.55);
-            font-size: 12px;
-            font-weight: 500;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.25s;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-            letter-spacing: 0.3px;
-            user-select: none;
-        }
-        .bg-set-btn:hover {
-            background: rgba(255,255,255,0.35);
-            transform: scale(1.03);
-            color: rgba(0,0,0,0.75);
-        }
-        .bg-set-btn:active {
-            transform: scale(0.94);
-        }
-        .bg-set-btn svg {
-            width: 16px;
-            height: 16px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-        }
-
-        /* ===== 隐藏输入 ===== */
+        /* ===== 隐藏文件输入 ===== */
         .hidden-input {
             display: none;
         }
@@ -1122,23 +1038,24 @@
             color: rgba(0,0,0,0.6);
         }
 
-        /* ===== 响应式 ===== */
+        /* ===== 响应式适配 ===== */
         @media (max-width: 480px) {
             .app-wrapper {
                 max-width: 100%;
                 border-radius: 0;
                 padding-left: 12px;
                 padding-right: 12px;
+                padding-top: calc(60px + env(safe-area-inset-top, 10px));
             }
             .back-arrow {
-                top: calc(20px + env(safe-area-inset-top, 0px));
+                top: calc(18px + env(safe-area-inset-top, 0px));
                 left: 12px;
-                width: 40px;
-                height: 40px;
+                width: 36px;
+                height: 36px;
             }
             .back-arrow svg {
-                width: 18px;
-                height: 18px;
+                width: 20px;
+                height: 20px;
             }
             .gallery-item {
                 flex: 0 0 78px;
@@ -1147,8 +1064,8 @@
         }
         @media (max-width: 420px) {
             .app-wrapper {
-                padding: 10px 10px 6px;
-                padding-top: calc(70px + env(safe-area-inset-top, 10px));
+                padding: 10px 10px 12px;
+                padding-top: calc(55px + env(safe-area-inset-top, 10px));
             }
             .profile-right {
                 gap: 10px;
@@ -1196,10 +1113,6 @@
                 width: 14px;
                 height: 14px;
                 font-size: 8px;
-            }
-            .bg-set-btn {
-                font-size: 11px;
-                padding: 6px 16px;
             }
         }
         @media (max-width: 360px) {
@@ -1250,13 +1163,8 @@
 </head>
 <body>
 
-<!-- ===== 背景层 ===== -->
-<div class="bg-layer" id="bgLayer">
-    <div class="bg-upload-hint">点击背景上传 · 也可用下方按钮</div>
-</div>
-
-<!-- ===== 返回按钮：圆形，history.back() ===== -->
-<a href="javascript:history.back()" class="back-arrow" title="返回">
+<!-- ===== 返回按钮（圆形，仅箭头） ===== -->
+<a href="index.html" class="back-arrow" title="返回">
     <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
 </a>
 
@@ -1380,7 +1288,7 @@
             </div>
         </div>
 
-        <!-- ===== 底部画廊 ===== -->
+        <!-- ===== 底部画廊（四张拉长图片） ===== -->
         <div class="gallery-scroll" id="galleryScroll">
             <div class="gallery-item" data-type="image" title="点击替换图片">
                 <span style="z-index:1;">🖼️</span>
@@ -1400,20 +1308,11 @@
             </div>
         </div>
 
-        <!-- ===== ★ 背景设置按钮 ===== -->
-        <div class="bg-set-btn-wrap">
-            <button class="bg-set-btn" id="bgSetBtn">
-                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                背景设置
-            </button>
-        </div>
-
     </div><!-- /profile-page -->
 </div><!-- /app-wrapper -->
 
 <!-- ===== 隐藏文件输入 ===== -->
 <input type="file" class="hidden-input" id="fileInput" accept="image/*">
-<input type="file" class="hidden-input" id="bgFileInput" accept="image/*">
 
 <!-- ===== 日期弹窗 ===== -->
 <div class="date-modal-overlay" id="dateModal">
@@ -1617,45 +1516,7 @@
         });
 
         // ============================================================
-        //  3. 背景上传（点击背景层 或 点击“背景设置”按钮）
-        // ============================================================
-        const bgLayer = document.getElementById('bgLayer');
-        const bgFileInput = document.getElementById('bgFileInput');
-        const bgSetBtn = document.getElementById('bgSetBtn');
-
-        // 点击背景层上传
-        bgLayer.addEventListener('click', function(e) {
-            if (e.target === this || e.target.closest('.bg-upload-hint')) {
-                bgFileInput.click();
-            }
-        });
-
-        // ★ 点击“背景设置”按钮上传 —— 重新绑定确保触发
-        bgSetBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            bgFileInput.click();
-        });
-
-        bgFileInput.addEventListener('change', function() {
-            const file = this.files[0];
-            if (!file) return;
-            compressImage(file, 1200, 1200, 0.85).then(dataUrl => {
-                bgLayer.style.backgroundImage = `url(${dataUrl})`;
-                bgLayer.style.backgroundSize = 'cover';
-                bgLayer.style.backgroundPosition = 'center';
-                bgLayer.classList.add('has-image');
-                // 按钮反馈
-                bgSetBtn.style.transform = 'scale(0.92)';
-                setTimeout(() => bgSetBtn.style.transform = '', 200);
-            }).catch(err => {
-                alert('背景图片压缩失败，请重试');
-                console.error(err);
-            });
-            this.value = '';
-        });
-
-        // ============================================================
-        //  4. 播放按钮
+        //  3. 播放按钮
         // ============================================================
         const playBtn = document.getElementById('playBtn');
         let isPlaying = false;
@@ -1667,7 +1528,7 @@
         });
 
         // ============================================================
-        //  5. 更多按钮
+        //  4. 更多按钮
         // ============================================================
         document.getElementById('postMoreBtn').addEventListener('click', function(e) {
             e.stopPropagation();
@@ -1675,7 +1536,7 @@
         });
 
         // ============================================================
-        //  6. 输入框空值保护
+        //  5. 输入框空值保护
         // ============================================================
         document.querySelectorAll('input[spellcheck="false"]').forEach(input => {
             const def = input.value;
@@ -1687,7 +1548,7 @@
             });
         });
 
-        console.log('✅ 个人中心稳定版加载完成 (返回使用 history.back，背景设置已修复)');
+        console.log('✅ 个人中心已加载（卡片居中，返回圆形，背景已移除）');
     })();
 </script>
 
