@@ -61,7 +61,11 @@ function _getReplyCardsForTimemail() {
     return result;
 }
 
-var PUNCTUATIONS = ['，', '。', '？', '！', '...', '、', '；'];
+// 🔥 标点符号列表（用于字卡之间）
+var PUNCTUATIONS = ['，', '；', '。', '？', '！'];
+// 🔥 结尾标点符号
+var END_PUNCTUATIONS = ['。', '！', '～'];
+
 var GROUP_MEMBERS = ['沈星回', '陆沉'];
 
 // =============================================
@@ -108,27 +112,88 @@ function _getRandomGroupMember() {
 // 获取我方名称（用于"致..."）- 强制返回"阿晏"
 // =============================================
 function _getMyNameForLetter() {
-    // 直接返回"阿晏"，确保固定
     return '阿晏';
 }
 
 // =============================================
-// 生成时空来信内容（使用与"收到的信"一致的逻辑）
+// 🔥 核心修复：生成时空来信内容（字卡之间用随机标点隔开）
 // =============================================
 function _generateTimemail() {
-    // 使用与 generateEnvelopeReplyText 相同的逻辑
     var sourcePool = _getReplyCardsForTimemail();
     if (sourcePool.length === 0) {
         sourcePool = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在'];
     }
-    var sentenceCount = Math.floor(Math.random() * (12 - 8 + 1)) + 8;
-    var replyContent = "";
-    for (var i = 0; i < sentenceCount; i++) {
-        var randomSentence = sourcePool[Math.floor(Math.random() * sourcePool.length)];
-        var punctuation = Math.random() < 0.2 ? "！" : (Math.random() < 0.2 ? "..." : "。");
-        replyContent += randomSentence + punctuation;
+    
+    // 随机打乱字卡顺序
+    var shuffled = sourcePool.slice();
+    for (var i = shuffled.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = shuffled[i];
+        shuffled[i] = shuffled[j];
+        shuffled[j] = temp;
     }
-    return { sentences: replyContent.split(/[。！？…]/).filter(function(s) { return s.trim(); }), content: replyContent };
+    
+    // 抽取 8-12 个字卡
+    var count = 8 + Math.floor(Math.random() * 5); // 8, 9, 10, 11, 12
+    var picked = shuffled.slice(0, Math.min(count, shuffled.length));
+    
+    var result = '';
+    for (var pi = 0; pi < picked.length; pi++) {
+        var punct;
+        if (pi === picked.length - 1) {
+            // 🔥 最后一个字卡用 。、！、～ 结尾
+            punct = END_PUNCTUATIONS[Math.floor(Math.random() * END_PUNCTUATIONS.length)];
+        } else {
+            // 🔥 中间字卡用 ，、；、。、？、！ 随机隔开
+            punct = PUNCTUATIONS[Math.floor(Math.random() * PUNCTUATIONS.length)];
+        }
+        result += picked[pi] + punct;
+    }
+    
+    // 按标点分割成句子数组（用于显示）
+    var sentences = result.split(/[。！？…～]/).filter(function(s) { return s.trim(); });
+    // 如果分割后为空，使用原始内容
+    if (sentences.length === 0) {
+        sentences = [result];
+    }
+    
+    return { sentences: sentences, content: result };
+}
+
+// 🔥 修复：生成回信内容（与上面逻辑一致）
+function generateEnvelopeReplyText() {
+    var sourcePool = _getReplyCardsForTimemail();
+    if (sourcePool.length === 0) {
+        sourcePool = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在'];
+    }
+    
+    // 随机打乱字卡顺序
+    var shuffled = sourcePool.slice();
+    for (var i = shuffled.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = shuffled[i];
+        shuffled[i] = shuffled[j];
+        shuffled[j] = temp;
+    }
+    
+    // 抽取 8-12 个字卡
+    var count = 8 + Math.floor(Math.random() * 5);
+    var picked = shuffled.slice(0, Math.min(count, shuffled.length));
+    
+    var result = '';
+    for (var pi = 0; pi < picked.length; pi++) {
+        var punct;
+        if (pi === picked.length - 1) {
+            // 🔥 最后一个字卡用 。、！、～ 结尾
+            punct = END_PUNCTUATIONS[Math.floor(Math.random() * END_PUNCTUATIONS.length)];
+        } else {
+            // 🔥 中间字卡用 ，、；、。、？、！ 随机隔开
+            punct = PUNCTUATIONS[Math.floor(Math.random() * PUNCTUATIONS.length)];
+        }
+        result += picked[pi] + punct;
+    }
+    
+    return result;
 }
 
 function _sendTimemail() {
@@ -272,14 +337,46 @@ function viewTimemail(id) {
     var inner = document.createElement('div');
     inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:28px 24px;width:min(400px, 90vw);max-height:70vh;overflow-y:auto;border:1px solid var(--border-color);';
     var pName = _getRandomGroupMember();
-    var myName = _getMyNameForLetter(); // 固定返回"阿晏"
+    var myName = _getMyNameForLetter();
     var date = new Date(letter.timestamp);
     var dateStr = date.getFullYear() + '年' + String(date.getMonth() + 1).padStart(2, '0') + '月' + String(date.getDate()).padStart(2, '0') + '日';
     var weekdays = ['日', '一', '二', '三', '四', '五', '六'];
     var weekdayStr = weekdays[date.getDay()];
-    var contentHtml = letter.sentences.map(function(s) {
-        return '<span style="font-size:15px;color:var(--text-primary);line-height:2;">' + _escHtml(s) + '</span>';
-    }).join('');
+    
+    // 🔥 显示信件内容（带标点符号）
+    var contentHtml = '';
+    if (letter.sentences && letter.sentences.length > 0) {
+        // 使用 sentences 数组显示
+        for (var si = 0; si < letter.sentences.length; si++) {
+            var s = letter.sentences[si];
+            if (s && s.trim()) {
+                // 判断是否最后一句，添加合适的结尾标点
+                var endPunct = '。';
+                if (si === letter.sentences.length - 1) {
+                    endPunct = END_PUNCTUATIONS[Math.floor(Math.random() * END_PUNCTUATIONS.length)];
+                } else {
+                    endPunct = PUNCTUATIONS[Math.floor(Math.random() * PUNCTUATIONS.length)];
+                }
+                contentHtml += '<span style="font-size:15px;color:var(--text-primary);line-height:2;">' + _escHtml(s.trim()) + endPunct + '</span>';
+            }
+        }
+    } else {
+        // 后备：如果 sentences 为空，使用 content
+        var contentParts = letter.content.split(/[。！？…～]/).filter(function(s) { return s.trim(); });
+        for (var pi = 0; pi < contentParts.length; pi++) {
+            var part = contentParts[pi];
+            if (part && part.trim()) {
+                var endPunct2 = (pi === contentParts.length - 1) ? 
+                    END_PUNCTUATIONS[Math.floor(Math.random() * END_PUNCTUATIONS.length)] : 
+                    PUNCTUATIONS[Math.floor(Math.random() * PUNCTUATIONS.length)];
+                contentHtml += '<span style="font-size:15px;color:var(--text-primary);line-height:2;">' + _escHtml(part.trim()) + endPunct2 + '</span>';
+            }
+        }
+        if (!contentHtml) {
+            contentHtml = '<span style="font-size:15px;color:var(--text-primary);line-height:2;">' + _escHtml(letter.content) + '</span>';
+        }
+    }
+    
     inner.innerHTML =
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
         '<span style="font-size:18px;font-weight:700;color:var(--text-primary);">⏳ 时空来信</span>' +
@@ -294,14 +391,12 @@ function viewTimemail(id) {
         '</div>' +
         '<div style="padding:16px 4px 12px;background:var(--primary-bg);border-radius:0 0 12px 12px;border:1px solid var(--border-color);border-top:none;">' +
         '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px;letter-spacing:1px;">' + dateStr + ' 星期' + weekdayStr + '</div>' +
-        // 修改：致... 固定为"阿晏"
         '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;font-style:italic;">致 ' + _escHtml(myName) + '，</div>' +
         '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;font-style:italic;">见字如面，望君安好。</div>' +
         '<div style="padding:8px 0 12px;border-top:1px dashed rgba(var(--border-color-rgb),0.3);margin-bottom:8px;">' +
         contentHtml +
         '</div>' +
         '<div style="text-align:right;font-size:12px;color:var(--text-secondary);margin-top:8px;">' + dateStr + '</div>' +
-        // 修改：落款从群成员中随机生成
         '<div style="text-align:right;font-size:14px;color:var(--accent-color);font-weight:600;letter-spacing:1px;">' + _escHtml(pName) + '</div>' +
         '</div>' +
         '<div style="display:flex;gap:8px;margin-top:12px;">' +
@@ -316,7 +411,7 @@ function viewTimemail(id) {
         var newContent = prompt('编辑信件内容（修改后保存）：', letter.content);
         if (newContent !== null && newContent.trim()) {
             letter.content = newContent.trim();
-            letter.sentences = newContent.trim().split(/[，。？！…、；]/).filter(function(s) { return s.trim(); });
+            letter.sentences = newContent.trim().split(/[，。？！…～、；]/).filter(function(s) { return s.trim(); });
             _setTimemailData(data);
             renderTimemailList();
             wrap.remove();
@@ -347,7 +442,7 @@ function toggleTimemailAuto() {
 }
 
 // =============================================
-// 原信封投递代码
+// 原信封投递代码（仅保留必要部分）
 // =============================================
 
 function getStorageKey(key) {
@@ -486,18 +581,6 @@ function openEnvelopeAndViewReply(replyId) {
         switchEnvTab('inbox');
         viewEnvLetter('inbox', replyId);
     }, 200);
-}
-
-function generateEnvelopeReplyText() {
-    var sourcePool = [].concat(customReplies);
-    var sentenceCount = Math.floor(Math.random() * (12 - 8 + 1)) + 8;
-    var replyContent = "";
-    for (var i = 0; i < sentenceCount; i++) {
-        var randomSentence = sourcePool[Math.floor(Math.random() * sourcePool.length)];
-        var punctuation = Math.random() < 0.2 ? "！" : (Math.random() < 0.2 ? "..." : "。");
-        replyContent += randomSentence + punctuation;
-    }
-    return replyContent;
 }
 
 function _createEmptyHTML(iconSvg, title, desc) {
@@ -650,7 +733,6 @@ function viewEnvLetter(section, id) {
     var toLine = document.getElementById('env-view-to-line');
     var greetingLine = document.getElementById('env-view-greeting-line');
     
-    // 获取我方名称用于"致..." - 固定为"阿晏"
     var myName = _getMyNameForLetter();
     
     if (section === 'outbox') {
@@ -658,7 +740,6 @@ function viewEnvLetter(section, id) {
         if (toLine) toLine.textContent = '致 ' + partnerName + '：';
         if (greetingLine) greetingLine.textContent = '见字如面，望君安好。';
     } else {
-        // 收到的信：致... 使用我方名称（"阿晏"）
         if (toLine) toLine.textContent = '致 ' + myName + '：';
         if (greetingLine) greetingLine.textContent = '见字如面，一切皆好。';
     }
@@ -671,7 +752,6 @@ function viewEnvLetter(section, id) {
         var myName2 = (typeof settings !== 'undefined' && settings.myName) || '你';
         if (signNameEl) signNameEl.textContent = myName2;
     } else {
-        // 收到的信：落款从群成员中随机生成
         var randomMember = _getRandomGroupMember();
         if (signNameEl) signNameEl.textContent = randomMember;
     }
@@ -947,4 +1027,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 800);
 });
 
-console.log('[信封投递] 时空来信功能已加载（修改版：致=阿晏，落款=群成员随机，正文逻辑与"收到的信"一致）');
+console.log('[信封投递] 时空来信功能已加载（修改版：字卡间随机标点，结尾用 。！～）');
