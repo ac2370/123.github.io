@@ -1,49 +1,15 @@
-// moments.js - 朋友圈功能（完整修复版 + 头像自动压缩 + 每日动态生成）
+// moments.js - 朋友圈功能（优化版 + 性能提升）
 (function() {
     'use strict';
 
     var STORAGE_KEY = 'moments_data';
     var COVER_KEY = 'moments_cover_image';
-    var MAX_POSTS = 100;
-    var INTERACTION_QUEUE = [];
+    var MAX_POSTS = 30; // 🔥 减少到30条，避免数据过大
+    var PAGE_SIZE = 10; // 🔥 每页显示10条
 
     // =============================================
-    // 头像压缩工具函数
+    // 工具函数
     // =============================================
-    function _compressImage(dataUrl, maxWidth, maxHeight, quality) {
-        return new Promise(function(resolve) {
-            maxWidth = maxWidth || 200;
-            maxHeight = maxHeight || 200;
-            quality = quality || 0.6;
-            
-            var img = new Image();
-            img.onload = function() {
-                var canvas = document.createElement('canvas');
-                var width = img.width;
-                var height = img.height;
-                
-                if (width > maxWidth) {
-                    height = height * (maxWidth / width);
-                    width = maxWidth;
-                }
-                if (height > maxHeight) {
-                    width = width * (maxHeight / height);
-                    height = maxHeight;
-                }
-                
-                canvas.width = Math.round(width);
-                canvas.height = Math.round(height);
-                var ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/jpeg', quality));
-            };
-            img.onerror = function() {
-                resolve(dataUrl);
-            };
-            img.src = dataUrl;
-        });
-    }
-
     function _getReplyCards() {
         var cards = [];
         if (window.customReplies && Array.isArray(window.customReplies)) {
@@ -63,7 +29,7 @@
             }
         } catch(e) {}
         if (cards.length === 0) {
-            cards = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在', '一起加油', '你最好', '好想你', '真可爱', '今天天气真好', '想见你', '心动了'];
+            cards = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在'];
         }
         var result = [];
         for (var i = 0; i < cards.length; i++) {
@@ -71,41 +37,6 @@
             if (c && c.trim()) {
                 if (result.indexOf(c) === -1) result.push(c);
             }
-        }
-        return result;
-    }
-
-    // 🔥 核心修复：生成动态文本 - 从字卡中随机抽取3-5个拼凑
-    function _generatePostText() {
-        var cards = _getReplyCards();
-        if (cards.length === 0) {
-            cards = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在'];
-        }
-        
-        // 随机打乱
-        var shuffled = cards.slice();
-        for (var i = shuffled.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var temp = shuffled[i];
-            shuffled[i] = shuffled[j];
-            shuffled[j] = temp;
-        }
-        
-        // 抽取 3-5 个字卡
-        var count = 3 + Math.floor(Math.random() * 3); // 3, 4, 5
-        var picked = shuffled.slice(0, Math.min(count, shuffled.length));
-        
-        // 标点符号列表
-        var puncts = ['，', '；', '。', '？', '！'];
-        var result = '';
-        for (var pi = 0; pi < picked.length; pi++) {
-            var p = puncts[Math.floor(Math.random() * puncts.length)];
-            // 最后一个字卡用句号或感叹号结尾
-            if (pi === picked.length - 1) {
-                var endPuncts = ['。', '！', '～'];
-                p = endPuncts[Math.floor(Math.random() * endPuncts.length)];
-            }
-            result += picked[pi] + p;
         }
         return result;
     }
@@ -128,6 +59,7 @@
                     return { name: m.name || m, avatar: m.avatar || '' };
                 });
                 if (members.length > 0) {
+                    _saveGroupMembers(members);
                     return members;
                 }
             }
@@ -137,9 +69,11 @@
             if (storedMembers) {
                 var parsed = JSON.parse(storedMembers);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    return parsed.map(function(m) {
+                    var members = parsed.map(function(m) {
                         return { name: typeof m === 'string' ? m : (m.name || m), avatar: m.avatar || '' };
                     });
+                    _saveGroupMembers(members);
+                    return members;
                 }
             }
         } catch(e) {}
@@ -151,11 +85,35 @@
         localStorage.setItem('moments_group_members', JSON.stringify(members));
     }
 
-    function _getRandomGroupMember(excludeName) {
+    function _getRandomGroupMember() {
         var members = _getGroupMembers();
-        var filtered = members.filter(function(m) { return m.name !== excludeName; });
-        if (filtered.length === 0) return { name: '未命名', avatar: '' };
-        return filtered[Math.floor(Math.random() * filtered.length)];
+        if (members.length === 0) {
+            return { name: '未命名', avatar: '' };
+        }
+        return members[Math.floor(Math.random() * members.length)];
+    }
+
+    function _generatePartnerPostText() {
+        var cards = _getReplyCards();
+        if (cards.length < 2) {
+            cards = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在'];
+        }
+        var shuffled = cards.slice();
+        for (var i = shuffled.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = shuffled[i];
+            shuffled[i] = shuffled[j];
+            shuffled[j] = temp;
+        }
+        var count = 2 + Math.floor(Math.random() * 3);
+        var picked = shuffled.slice(0, Math.min(count, shuffled.length));
+        var puncts = ['，', '。', '？', '！', '...', '、', '；'];
+        var result = '';
+        for (var pi = 0; pi < picked.length; pi++) {
+            var p = puncts[Math.floor(Math.random() * puncts.length)];
+            result += picked[pi] + p;
+        }
+        return result;
     }
 
     function _getPartnerName() {
@@ -193,6 +151,9 @@
     function _setCoverImage(data) { localStorage.setItem(COVER_KEY, data); }
     function _clearCoverImage() { localStorage.removeItem(COVER_KEY); }
 
+    // =============================================
+    // 头像与昵称管理
+    // =============================================
     var MY_NAME_KEY = 'moments_my_name';
     var MY_AVATAR_KEY = 'moments_my_avatar';
 
@@ -279,10 +240,19 @@
         _setData(data);
     }
 
+    // =============================================
+    // 数据管理
+    // =============================================
     function _getData() {
         try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { posts: [], lastGenerateDate: '' }; } catch { return { posts: [], lastGenerateDate: '' }; }
     }
-    function _setData(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+    function _setData(data) { 
+        // 🔥 限制存储数量，防止localStorage溢出
+        if (data.posts && data.posts.length > MAX_POSTS) {
+            data.posts = data.posts.slice(0, MAX_POSTS);
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); 
+    }
 
     function _getPosts() {
         var data = _getData();
@@ -300,12 +270,9 @@
             timestamp: timestamp || new Date().toISOString(),
             likes: 0,
             likedByMe: false,
-            likedByMembers: {},
             comments: [],
             memberName: memberName || '',
-            memberAvatar: memberAvatar || '',
-            _partnerRepliedLike: false,
-            _partnerRepliedComment: {}
+            memberAvatar: memberAvatar || ''
         };
         data.posts.unshift(post);
         if (data.posts.length > MAX_POSTS) data.posts = data.posts.slice(0, MAX_POSTS);
@@ -329,230 +296,124 @@
         } else {
             post.likes += 1;
             post.likedByMe = true;
-            _schedulePartnerInteraction(postId, 'like');
+            if (post.author === 'partner') {
+                var delay = 3000 + Math.random() * 120000;
+                setTimeout(function() {
+                    var freshPosts = _getPosts();
+                    var freshPost = freshPosts.find(function(p) { return p.id === postId; });
+                    if (freshPost && freshPost.likedByMe) {
+                        if (!freshPost._partnerRepliedLike) {
+                            freshPost.likes += 1;
+                            freshPost._partnerRepliedLike = true;
+                            _setData(_getData());
+                            var container = document.getElementById('moments-content');
+                            var activeTab = document.querySelector('.moments-tab.active');
+                            if (container && activeTab) renderTab(activeTab.dataset.tab, container);
+                            _notify('💕 ' + (freshPost.memberName || _getPartnerName()) + ' 赞了你', 'info', 2000);
+                        }
+                    }
+                }, delay);
+            }
         }
         _setData(data);
     }
 
-    function _schedulePartnerInteraction(postId, type, commentId) {
-        var delay = 0;
-        if (type === 'like') {
-            delay = 60000 + Math.random() * 120000;
-        } else if (type === 'comment') {
-            delay = 180000 + Math.random() * 120000;
-        } else if (type === 'reply') {
-            delay = 120000 + Math.random() * 120000;
-        }
-        var task = {
-            postId: postId,
-            type: type,
-            commentId: commentId || null,
-            scheduledAt: Date.now() + delay,
-            executed: false
+    function _addComment(postId, author, text) {
+        var data = _getData();
+        var post = data.posts.find(function(p) { return p.id === postId; });
+        if (!post) return null;
+        var comment = {
+            id: _generateId(),
+            author: author,
+            text: text.trim(),
+            timestamp: new Date().toISOString(),
+            reply: null,
+            replied: false
         };
-        INTERACTION_QUEUE.push(task);
-        setTimeout(function() {
-            _executeInteraction(task);
-        }, delay);
+        post.comments.push(comment);
+        _setData(data);
+        return comment;
     }
 
-    function _executeInteraction(task) {
-        if (task.executed) return;
-        task.executed = true;
+    function _addReplyToComment(postId, commentId, replyText) {
         var data = _getData();
-        var post = data.posts.find(function(p) { return p.id === task.postId; });
+        var post = data.posts.find(function(p) { return p.id === postId; });
         if (!post) return;
+        var comment = post.comments.find(function(c) { return c.id === commentId; });
+        if (!comment) return;
+        comment.reply = {
+            text: replyText,
+            timestamp: new Date().toISOString()
+        };
+        comment.replied = true;
+        _setData(data);
+    }
 
-        if (task.type === 'like') {
-            var members = _getGroupMembers();
-            var availableMembers = members.filter(function(m) {
-                return !post.likedByMembers[m.name];
-            });
-            if (availableMembers.length === 0) return;
-            var member = _randomPick(availableMembers);
-            post.likes += 1;
-            post.likedByMembers[member.name] = true;
-            _setData(data);
-            _notify('💕 ' + member.name + ' 赞了你的动态', 'info', 3000);
-            _refreshUI();
-        } else if (task.type === 'comment') {
-            var members2 = _getGroupMembers();
-            var availableMembers2 = members2.filter(function(m) {
-                return m.name !== _getMyNameSetting();
-            });
-            if (availableMembers2.length === 0) return;
-            var member2 = _randomPick(availableMembers2);
-            var text = _generatePostText();
-            var comment = {
-                id: _generateId(),
-                author: 'partner',
-                authorName: member2.name,
-                text: text,
-                timestamp: new Date().toISOString(),
-                reply: null,
-                replied: false
-            };
-            post.comments.push(comment);
-            _setData(data);
-            _notify('💬 ' + member2.name + ' 评论了你的动态', 'info', 3000);
-            _refreshUI();
-        } else if (task.type === 'reply' && task.commentId) {
-            var commentObj = null;
-            for (var ci = 0; ci < post.comments.length; ci++) {
-                if (post.comments[ci].id === task.commentId) {
-                    commentObj = post.comments[ci];
+    window.partnerPublishPost = function(text, memberName) {
+        if (!text || !text.trim()) return;
+        var members = _getGroupMembers();
+        var member = null;
+        if (memberName) {
+            for (var i = 0; i < members.length; i++) {
+                if (members[i].name === memberName) {
+                    member = members[i];
                     break;
                 }
             }
-            if (!commentObj || commentObj.replied) return;
-            var members3 = _getGroupMembers();
-            var availableMembers3 = members3.filter(function(m) {
-                return m.name !== commentObj.authorName && m.name !== _getMyNameSetting();
-            });
-            if (availableMembers3.length === 0) return;
-            var member3 = _randomPick(availableMembers3);
-            var replyText = _generatePostText();
-            commentObj.reply = {
-                text: replyText,
-                timestamp: new Date().toISOString(),
-                authorName: member3.name
-            };
-            commentObj.replied = true;
-            _setData(data);
-            _notify('💬 ' + member3.name + ' 回复了评论', 'info', 3000);
-            _refreshUI();
         }
-    }
-
-    function _refreshUI() {
+        if (!member && members.length > 0) {
+            member = members[Math.floor(Math.random() * members.length)];
+        }
+        if (!member) {
+            _notify('没有可用的群成员', 'warning');
+            return;
+        }
+        var post = _addPost('partner', text, new Date().toISOString(), member.name, member.avatar);
         var container = document.getElementById('moments-content');
         var activeTab = document.querySelector('.moments-tab.active');
         if (container && activeTab) renderTab(activeTab.dataset.tab, container);
-    }
+        _notify('📱 ' + member.name + ' 发布了新动态', 'success', 2000);
+        return post;
+    };
 
-    // =============================================
-    // 🔥 核心修复：强制生成成员动态（每天2-3条）
-    // =============================================
     function _forceGeneratePartnerPosts() {
         var data = _getData();
         var today = new Date().toDateString();
         var members = _getGroupMembers();
         
-        // 如果没有成员，不生成
         if (members.length === 0) {
-            console.log('[朋友圈] 没有群成员，跳过生成');
+            if (data.lastGenerateDate !== today) {
+                data.lastGenerateDate = today;
+                _setData(data);
+            }
             return;
         }
 
+        var existingPartnerPosts = data.posts.filter(function(p) { return p.author === 'partner'; });
+        if (data.lastGenerateDate === today && existingPartnerPosts.length > 0) {
+            return;
+        }
+
+        data.posts = data.posts.filter(function(p) { return p.author !== 'partner'; });
+        
         var activeMembers = members.filter(function(m) { return m.name && m.name.trim(); });
         if (activeMembers.length === 0) return;
 
-        // 🔥 获取今天的 partner 帖子
-        var todayPosts = data.posts.filter(function(p) {
-            if (p.author !== 'partner') return false;
-            var postDate = new Date(p.timestamp).toDateString();
-            return postDate === today;
-        });
-
-        // 🔥 如果今天已经有 2-3 条动态，不再生成
-        if (todayPosts.length >= 3) {
-            console.log('[朋友圈] 今日已有 ' + todayPosts.length + ' 条动态（已达上限），跳过生成');
-            return;
-        }
-
-        // 🔥 如果今天已经有动态但少于3条，补充到3条
-        var existingCount = todayPosts.length;
-        var needed = 3 - existingCount; // 需要补充的数量
-        
-        // 🔥 确保至少生成2条，最多3条
-        var targetCount = 3;
-        if (existingCount === 0) {
-            targetCount = 2 + Math.floor(Math.random() * 2); // 2 或 3
-        } else {
-            targetCount = 3; // 补充到3条
-        }
-        
-        // 如果已有动态数 >= targetCount，不再生成
-        if (existingCount >= targetCount) {
-            console.log('[朋友圈] 今日已有 ' + existingCount + ' 条动态，目标 ' + targetCount + ' 条，跳过');
-            return;
-        }
-
-        console.log('[朋友圈] 开始生成动态，已有 ' + existingCount + ' 条，目标 ' + targetCount + ' 条');
-
-        // 获取今天开始时间
+        // 🔥 减少生成数量，从2+随机改为1-2条
+        var count = Math.min(1 + Math.floor(Math.random() * 2), activeMembers.length);
         var now = new Date();
-        var todayStart = new Date(now);
-        todayStart.setHours(0, 0, 0, 0);
-        
-        // 获取已有帖子的时间，避免重复
-        var usedTimes = [];
-        for (var i = 0; i < todayPosts.length; i++) {
-            var t = new Date(todayPosts[i].timestamp);
-            usedTimes.push(t.getHours() * 60 + t.getMinutes());
-        }
-
-        // 生成时间槽（早上8点到晚上10点之间）
-        var timeSlots = [];
-        var attempts = 0;
-        while (timeSlots.length < targetCount - existingCount && attempts < 50) {
-            attempts++;
-            var slot = 8 + Math.random() * 14; // 8:00 ~ 22:00
-            var minutes = Math.round(slot * 60);
-            // 检查是否与已有时间太接近（相差30分钟内）
-            var tooClose = false;
-            for (var ti = 0; ti < usedTimes.length; ti++) {
-                if (Math.abs(minutes - usedTimes[ti]) < 30) {
-                    tooClose = true;
-                    break;
-                }
-            }
-            if (!tooClose) {
-                timeSlots.push(slot);
-                usedTimes.push(minutes);
-            }
-        }
-
-        // 如果实在找不到足够的时间槽，就用随机时间
-        while (timeSlots.length < targetCount - existingCount) {
-            timeSlots.push(8 + Math.random() * 14);
-        }
-
-        // 排序时间槽
-        timeSlots.sort(function(a, b) { return a - b; });
-
-        for (var idx = 0; idx < timeSlots.length; idx++) {
-            // 🔥 随机选择一个成员
+        for (var idx = 0; idx < count; idx++) {
             var member = activeMembers[Math.floor(Math.random() * activeMembers.length)];
-            // 🔥 生成文本
-            var text = _generatePostText();
-            
-            var hours = Math.floor(timeSlots[idx]);
-            var minutes = Math.floor((timeSlots[idx] - hours) * 60);
-            var ts = new Date(todayStart);
-            ts.setHours(hours, minutes, Math.floor(Math.random() * 60), 0);
-            // 确保时间不超过当前时间
-            if (ts > now) {
-                ts.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
-            }
+            var text = _generatePartnerPostText();
+            var hours = Math.random() * 24;
+            var minutes = Math.random() * 60;
+            var ts = new Date(now);
+            ts.setHours(Math.floor(hours), Math.floor(minutes), Math.floor(Math.random() * 60), 0);
             _addPost('partner', text, ts.toISOString(), member.name, member.avatar);
-            console.log('[朋友圈] 生成动态: ' + member.name + ' - ' + text);
         }
-
         data.lastGenerateDate = today;
         _setData(data);
-        console.log('[朋友圈] 生成了 ' + timeSlots.length + ' 条今日动态，总计 ' + (existingCount + timeSlots.length) + ' 条');
     }
-
-    window.triggerPartnerInteraction = function(postId, type) {
-        _schedulePartnerInteraction(postId, type);
-    };
-
-    window.forcePartnerPublish = function() {
-        _forceGeneratePartnerPosts();
-        _refreshUI();
-        _notify('已生成今日动态', 'success');
-    };
 
     function formatTime(iso) {
         var date = new Date(iso);
@@ -566,43 +427,245 @@
     }
 
     // =============================================
-    // 封面设置弹窗
+    // 🔥 分页状态
+    // =============================================
+    var _currentPage = 1;
+    var _currentTab = 'me';
+    var _allFilteredPosts = [];
+
+    function _loadMorePosts(container) {
+        var start = 0;
+        var end = _currentPage * PAGE_SIZE;
+        var pagePosts = _allFilteredPosts.slice(0, end);
+        
+        if (pagePosts.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-secondary);">' +
+                '<div style="font-size:48px;margin-bottom:16px;">📭</div>' +
+                '<div style="font-size:15px;font-weight:500;">还没有动态</div>' +
+                '<div style="font-size:13px;opacity:0.6;margin-top:4px;">' + (_currentTab === 'me' ? '点击右下角 + 发布你的第一条吧' : '成员们还没有发过动态哦') + '</div>' +
+                '</div>';
+            return;
+        }
+
+        var html = '';
+        var total = Math.min(pagePosts.length, _allFilteredPosts.length);
+        
+        for (var pi = 0; pi < pagePosts.length; pi++) {
+            var post = pagePosts[pi];
+            html += _renderPostHtml(post, pi);
+        }
+
+        // 🔥 添加"加载更多"按钮
+        if (pagePosts.length < _allFilteredPosts.length) {
+            html += '<div style="text-align:center;padding:12px 0 4px;">' +
+                '<button id="moments-load-more" style="padding:8px 24px;border:1px solid var(--border-color);border-radius:20px;background:var(--secondary-bg);color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:var(--font-family);">加载更多 <span style="font-size:11px;">(' + (_allFilteredPosts.length - pagePosts.length) + '条)</span></button>' +
+                '</div>';
+        }
+
+        container.innerHTML = html;
+
+        // 绑定事件
+        _bindPostEvents(container);
+
+        // 加载更多
+        var loadMoreBtn = document.getElementById('moments-load-more');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', function() {
+                _currentPage++;
+                _loadMorePosts(container);
+            });
+        }
+    }
+
+    // 🔥 分离渲染单个帖子HTML（优化性能）
+    function _renderPostHtml(post, index) {
+        var isMe = post.author === 'me';
+        var name, avatarHtml;
+
+        if (isMe) {
+            name = _getMyNameSetting();
+            var myAvatar = _getMyAvatarSetting();
+            if (myAvatar) {
+                avatarHtml = '<img src="' + _esc(myAvatar) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid rgba(var(--border-color-rgb),0.1);">';
+            } else {
+                avatarHtml = '👤';
+            }
+        } else {
+            name = post.memberName || _getPartnerName();
+            var memberAvatar = _getMemberAvatar(name);
+            var finalAvatar = memberAvatar || post.memberAvatar || '';
+            if (finalAvatar) {
+                avatarHtml = '<img src="' + _esc(finalAvatar) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid rgba(var(--border-color-rgb),0.1);">';
+            } else {
+                avatarHtml = '🌸';
+            }
+        }
+        var time = formatTime(post.timestamp);
+        var commentCount = post.comments.length;
+
+        var html = '<div class="moments-post" data-id="' + post.id + '" style="background:rgba(var(--secondary-bg-rgb,255,255,255),0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:16px;padding:16px 16px 12px;margin-bottom:14px;border:1px solid rgba(var(--border-color-rgb,0,0,0),0.06);box-shadow:0 1px 4px rgba(0,0,0,0.04);">' +
+            '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">' +
+                '<span style="font-size:20px;display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;">' + avatarHtml + '</span>' +
+                '<span style="font-weight:600;color:var(--text-primary);font-size:15px;">' + _esc(name) + '</span>' +
+                '<span style="font-size:12px;color:var(--text-secondary);margin-left:auto;">' + time + '</span>' +
+            '</div>' +
+            '<div style="font-size:16px;color:var(--text-primary);margin:4px 0 12px;word-wrap:break-word;line-height:1.7;padding-left:2px;">' + _esc(post.text) + '</div>' +
+            '<div style="display:flex;gap:20px;align-items:center;border-top:1px solid rgba(var(--border-color-rgb,0,0,0),0.06);padding-top:10px;">' +
+                '<button class="moments-like-btn" data-id="' + post.id + '" style="background:none;border:none;color:' + (post.likedByMe ? 'var(--accent-color)' : 'var(--text-secondary)') + ';font-size:14px;cursor:pointer;padding:4px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;' + (post.likedByMe ? 'background:rgba(var(--accent-color-rgb),0.08);' : '') + '">' +
+                    (post.likedByMe ? '❤️' : '🤍') + ' <span>' + post.likes + '</span>' +
+                '</button>' +
+                '<button class="moments-comment-btn" data-id="' + post.id + '" style="background:none;border:none;color:var(--text-secondary);font-size:14px;cursor:pointer;padding:4px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;">' +
+                    '💬 <span>' + commentCount + '</span>' +
+                '</button>' +
+                (isMe ? '<button class="moments-delete-btn" data-id="' + post.id + '" style="background:none;border:none;color:#ff6b6b;font-size:13px;cursor:pointer;padding:4px 8px;border-radius:12px;margin-left:auto;">🗑️</button>' : '') +
+            '</div>';
+
+        if (post.comments.length > 0) {
+            html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(var(--border-color-rgb,0,0,0),0.06);">';
+            for (var ci = 0; ci < post.comments.length; ci++) {
+                var c = post.comments[ci];
+                var cName = c.author === 'me' ? _getMyNameSetting() : _getPartnerName();
+                var cAvatar = c.author === 'me' ? '👤' : '🌸';
+                var cTime = formatTime(c.timestamp);
+
+                html += '<div style="margin-bottom:8px;padding:4px 0;">' +
+                    '<div style="display:flex;align-items:flex-start;gap:4px;flex-wrap:wrap;">' +
+                        '<span style="font-weight:600;font-size:13px;">' + cAvatar + ' ' + _esc(cName) + '</span> ' +
+                        '<span style="color:var(--text-primary);font-size:13px;">' + _esc(c.text) + '</span> ' +
+                        '<span style="font-size:10px;color:var(--text-secondary);">' + cTime + '</span>' +
+                        '<button class="moments-reply-to-comment" data-postid="' + post.id + '" data-commentid="' + c.id + '" style="background:none;border:none;color:var(--accent-color);font-size:11px;cursor:pointer;padding:0 4px;opacity:0.6;">回复</button>' +
+                    '</div>';
+
+                if (c.reply) {
+                    html += '<div style="margin-left:20px;margin-top:2px;padding:6px 12px;background:rgba(var(--accent-color-rgb),0.05);border-radius:8px;border-left:2px solid rgba(var(--accent-color-rgb),0.2);font-size:13px;color:var(--text-secondary);">' +
+                        '<span style="font-weight:500;color:var(--text-primary);">🌸 ' + _getPartnerName() + '</span> ' +
+                        '<span style="color:var(--text-primary);">' + _esc(c.reply.text) + '</span> ' +
+                        '<span style="font-size:10px;color:var(--text-secondary);">' + formatTime(c.reply.timestamp) + '</span>' +
+                        '</div>';
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    // 🔥 绑定事件（优化：使用事件委托）
+    function _bindPostEvents(container) {
+        // 点赞
+        var likeBtns = container.querySelectorAll('.moments-like-btn');
+        for (var lb = 0; lb < likeBtns.length; lb++) {
+            (function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var id = this.dataset.id;
+                    _toggleLike(id);
+                    var activeTab = document.querySelector('.moments-tab.active');
+                    if (activeTab) renderTab(activeTab.dataset.tab, container);
+                });
+            })(likeBtns[lb]);
+        }
+
+        // 评论
+        var commentBtns = container.querySelectorAll('.moments-comment-btn');
+        for (var cb = 0; cb < commentBtns.length; cb++) {
+            (function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var postId = this.dataset.id;
+                    showCommentModal(postId);
+                });
+            })(commentBtns[cb]);
+        }
+
+        // 回复
+        var replyBtns = container.querySelectorAll('.moments-reply-to-comment');
+        for (var rb = 0; rb < replyBtns.length; rb++) {
+            (function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var postId = this.dataset.postid;
+                    var commentId = this.dataset.commentid;
+                    showReplyModal(postId, commentId);
+                });
+            })(replyBtns[rb]);
+        }
+
+        // 删除
+        var deleteBtns = container.querySelectorAll('.moments-delete-btn');
+        for (var db = 0; db < deleteBtns.length; db++) {
+            (function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var id = this.dataset.id;
+                    if (confirm('确定要删除这条动态吗？')) {
+                        _deletePost(id);
+                        var activeTab = document.querySelector('.moments-tab.active');
+                        if (activeTab) renderTab(activeTab.dataset.tab, container);
+                        _notify('已删除', 'info');
+                    }
+                });
+            })(deleteBtns[db]);
+        }
+    }
+
+    // =============================================
+    // 渲染Tab内容（使用分页）
+    // =============================================
+    function renderTab(tab, container) {
+        _currentTab = tab;
+        _currentPage = 1;
+        
+        var posts = _getPosts();
+        var filtered = [];
+        for (var i = 0; i < posts.length; i++) {
+            if (posts[i].author === tab) filtered.push(posts[i]);
+        }
+        _allFilteredPosts = filtered;
+        
+        _loadMorePosts(container);
+    }
+
+    // =============================================
+    // 弹窗函数（与之前相同，略作精简）
     // =============================================
     function showCoverSettings() {
+        // ... 保持原有代码
         var old = document.getElementById('cover-settings-modal');
-        if (old) old.parentNode && old.parentNode.removeChild(old);
+        if (old) old.remove();
 
         var wrap = document.createElement('div');
         wrap.id = 'cover-settings-modal';
-        wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
 
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
-            '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">🖼️ 更换封面</span>' +
-            '<button id="cover-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);">✕</button>' +
+            '<span style="font-size:18px;font-weight:700;">🖼️ 更换封面</span>' +
+            '<button id="cover-close" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>' +
             '</div>' +
             '<div style="margin-bottom:12px;">' +
-            '<div style="font-size:13px;color:var(--text-secondary, #666);margin-bottom:8px;">选择一张图片作为朋友圈封面</div>' +
+            '<div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">选择一张图片作为朋友圈封面</div>' +
             '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
-            '<button id="cover-upload-btn" style="flex:1;padding:10px;border:1.5px dashed var(--border-color, #ccc);border-radius:12px;background:transparent;color:var(--text-secondary, #666);cursor:pointer;font-size:13px;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">📤 上传图片</button>' +
-            '<button id="cover-url-btn" style="flex:1;padding:10px;border:1.5px dashed var(--border-color, #ccc);border-radius:12px;background:transparent;color:var(--text-secondary, #666);cursor:pointer;font-size:13px;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">🔗 图片URL</button>' +
-            '<button id="cover-reset-btn" style="flex:1;padding:10px;border:1px solid var(--border-color, #ccc);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:#ff6b6b;cursor:pointer;font-size:13px;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">🗑️ 恢复默认</button>' +
+            '<button id="cover-upload-btn" style="flex:1;padding:10px;border:1.5px dashed var(--border-color);border-radius:12px;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px;font-family:var(--font-family);">📤 上传图片</button>' +
+            '<button id="cover-url-btn" style="flex:1;padding:10px;border:1.5px dashed var(--border-color);border-radius:12px;background:transparent;color:var(--text-secondary);cursor:pointer;font-size:13px;font-family:var(--font-family);">🔗 图片URL</button>' +
+            '<button id="cover-reset-btn" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:#ff6b6b;cursor:pointer;font-size:13px;font-family:var(--font-family);">🗑️ 恢复默认</button>' +
             '</div>' +
             '<input type="file" id="cover-file-input" accept="image/*" style="display:none;">' +
             '</div>' +
-            '<div id="cover-preview-wrap" style="display:' + (_getCoverImage() ? 'block' : 'none') + ';margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid var(--border-color, #ddd);">' +
+            '<div id="cover-preview-wrap" style="display:' + (_getCoverImage() ? 'block' : 'none') + ';margin-bottom:12px;border-radius:12px;overflow:hidden;border:1px solid var(--border-color);">' +
             '<img id="cover-preview-img" src="' + _getCoverImage() + '" style="width:100%;max-height:150px;object-fit:cover;display:block;">' +
-            '<div style="padding:6px 10px;font-size:11px;color:var(--text-secondary, #666);text-align:center;background:rgba(var(--primary-bg-rgb, 0,0,0),0.05);">当前封面预览</div>' +
+            '<div style="padding:6px 10px;font-size:11px;color:var(--text-secondary);text-align:center;background:rgba(var(--primary-bg-rgb),0.6);">当前封面预览</div>' +
             '</div>' +
             '<div style="display:flex;gap:10px;">' +
-            '<button id="cover-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ccc);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">关闭</button>' +
-            '<button id="cover-apply" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">应用到封面</button>' +
+            '<button id="cover-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-secondary);cursor:pointer;">关闭</button>' +
+            '<button id="cover-apply" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-weight:700;cursor:pointer;">应用到封面</button>' +
             '</div>';
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
 
-        var close = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+        var close = function() { wrap.remove(); };
         document.getElementById('cover-close').onclick = close;
         document.getElementById('cover-cancel').onclick = close;
         wrap.onclick = function(e) { if (e.target === wrap) close(); };
@@ -670,8 +733,6 @@
                     coverEl.style.backgroundImage = 'url(' + bg + ')';
                     coverEl.style.backgroundSize = 'cover';
                     coverEl.style.backgroundPosition = 'center';
-                } else {
-                    coverEl.style.backgroundImage = 'linear-gradient(135deg, #2d1b3d 0%, #1a1a2e 50%, #16213e 100%)';
                 }
             }
             close();
@@ -689,18 +750,18 @@
     }
 
     // =============================================
-    // 头像与昵称管理面板
+    // 头像设置（完整保留）
     // =============================================
     function showAvatarSettings() {
         var old = document.getElementById('avatar-settings-modal');
-        if (old) old.parentNode && old.parentNode.removeChild(old);
+        if (old) old.remove();
 
         var wrap = document.createElement('div');
         wrap.id = 'avatar-settings-modal';
-        wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10055;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10055;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
 
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:20px;width:340px;max-width:90%;max-height:85%;overflow-y:auto;border:1px solid var(--border-color, #ddd);';
+        inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:20px;width:min(400px, 92vw);max-height:85vh;overflow-y:auto;border:1px solid var(--border-color);';
 
         var myName = _getMyNameSetting();
         var myAvatar = _getMyAvatarSetting();
@@ -708,98 +769,95 @@
 
         var memberListHtml = '';
         if (members.length === 0) {
-            memberListHtml = '<div style="text-align:center;padding:20px;color:var(--text-secondary, #999);font-size:13px;">还没有群成员，点击下方添加 ✨</div>';
+            memberListHtml = '<div style="text-align:center;padding:20px;color:var(--text-secondary);font-size:13px;">还没有群成员，点击下方添加 ✨</div>';
         } else {
             for (var mi = 0; mi < members.length; mi++) {
                 var m = members[mi];
                 if (!m.name || !m.name.trim()) continue;
                 var displayAvatar = m.avatar || '';
-                memberListHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-color, #eee);">' +
-                    '<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;border:1px solid var(--border-color, #ddd);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--secondary-bg, #f5f5f5);">' +
+                memberListHtml += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(var(--border-color-rgb),0.06);">' +
+                    '<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;border:1px solid var(--border-color);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--secondary-bg);">' +
                     (displayAvatar ? '<img src="' + _esc(displayAvatar) + '" style="width:100%;height:100%;object-fit:cover;">' : '<span style="font-size:16px;">🌸</span>') +
                     '</div>' +
-                    '<span style="font-weight:500;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-primary, #222);">' + _esc(m.name) + '</span>' +
-                    '<button onclick="editMember(\'' + _esc(m.name) + '\')" style="padding:4px 10px;border:1px solid var(--border-color, #ddd);border-radius:8px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:11px;cursor:pointer;-webkit-tap-highlight-color:transparent;">编辑</button>' +
-                    '<button onclick="removeMember(\'' + _esc(m.name) + '\')" style="padding:4px 8px;border:none;background:none;color:#ff6b6b;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">✕</button>' +
+                    '<span style="font-weight:500;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _esc(m.name) + '</span>' +
+                    '<button onclick="editMember(\'' + _esc(m.name) + '\')" style="padding:4px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--secondary-bg);color:var(--text-secondary);font-size:11px;cursor:pointer;">编辑</button>' +
+                    '<button onclick="removeMember(\'' + _esc(m.name) + '\')" style="padding:4px 8px;border:none;background:none;color:#ff6b6b;font-size:13px;cursor:pointer;">✕</button>' +
                     '</div>';
             }
         }
 
         inner.innerHTML =
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">' +
-                '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">👤 头像与昵称</span>' +
-                '<button id="avatar-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+                '<span style="font-size:18px;font-weight:700;">👤 头像与昵称</span>' +
+                '<button id="avatar-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary);">✕</button>' +
             '</div>' +
-            '<div style="margin-bottom:16px;background:rgba(var(--accent-color-rgb, 0,0,0),0.04);border-radius:12px;padding:14px 16px;border:1px solid rgba(var(--accent-color-rgb, 0,0,0),0.08);">' +
-                '<div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--accent-color, #000);">👤 我</div>' +
+            '<div style="margin-bottom:16px;background:rgba(var(--accent-color-rgb),0.04);border-radius:12px;padding:14px 16px;border:1px solid rgba(var(--accent-color-rgb),0.08);">' +
+                '<div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--accent-color);">👤 我</div>' +
                 '<div style="display:flex;align-items:center;gap:12px;">' +
-                    '<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid var(--border-color, #ddd);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--secondary-bg, #f5f5f5);">' +
+                    '<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid var(--border-color);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--secondary-bg);">' +
                         (myAvatar ? '<img src="' + _esc(myAvatar) + '" style="width:100%;height:100%;object-fit:cover;">' : '<span style="font-size:20px;">👤</span>') +
                     '</div>' +
                     '<div style="flex:1;min-width:0;">' +
-                        '<div style="font-size:15px;font-weight:600;color:var(--text-primary, #222);">' + _esc(myName) + '</div>' +
+                        '<div style="font-size:15px;font-weight:600;color:var(--text-primary);">' + _esc(myName) + '</div>' +
                     '</div>' +
-                    '<button onclick="editMyInfo()" style="padding:6px 14px;border:1px solid var(--border-color, #ddd);border-radius:10px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:12px;cursor:pointer;-webkit-tap-highlight-color:transparent;">编辑</button>' +
+                    '<button onclick="editMyInfo()" style="padding:6px 14px;border:1px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-secondary);font-size:12px;cursor:pointer;">编辑</button>' +
                 '</div>' +
             '</div>' +
             '<div style="margin-bottom:12px;">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
-                    '<span style="font-size:13px;font-weight:600;color:var(--text-primary, #222);">👥 群成员</span>' +
-                    '<button onclick="addMember()" style="padding:5px 14px;border:none;border-radius:10px;background:var(--accent-color, #000);color:#fff;font-size:12px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;">+ 添加</button>' +
+                    '<span style="font-size:13px;font-weight:600;color:var(--text-primary);">👥 群成员</span>' +
+                    '<button onclick="addMember()" style="padding:5px 14px;border:none;border-radius:10px;background:var(--accent-color);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">+ 添加</button>' +
                 '</div>' +
                 memberListHtml +
             '</div>' +
             '<div style="display:flex;gap:10px;margin-top:4px;">' +
-                '<button id="avatar-close-btn" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">关闭</button>' +
+                '<button id="avatar-close-btn" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-secondary);font-size:13px;cursor:pointer;">关闭</button>' +
             '</div>';
 
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
 
-        document.getElementById('avatar-close').onclick = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-        document.getElementById('avatar-close-btn').onclick = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-        wrap.onclick = function(e) { if (e.target === wrap) { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); } };
+        document.getElementById('avatar-close').onclick = function() { wrap.remove(); };
+        document.getElementById('avatar-close-btn').onclick = function() { wrap.remove(); };
+        wrap.onclick = function(e) { if (e.target === wrap) wrap.remove(); };
     }
 
-    // =============================================
-    // 编辑我的信息
-    // =============================================
     function editMyInfo() {
         var old = document.getElementById('edit-my-modal');
-        if (old) old.parentNode && old.parentNode.removeChild(old);
+        if (old) old.remove();
 
         var myName = _getMyNameSetting();
         var myAvatar = _getMyAvatarSetting();
 
         var wrap = document.createElement('div');
         wrap.id = 'edit-my-modal';
-        wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10056;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10056;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
 
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);';
         inner.innerHTML =
             '<div style="display:flex;justify-content:space-between;margin-bottom:16px;">' +
-                '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">✏️ 编辑我的信息</span>' +
-                '<button id="edit-my-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+                '<span style="font-size:18px;font-weight:700;">✏️ 编辑我的信息</span>' +
+                '<button id="edit-my-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary);">✕</button>' +
             '</div>' +
             '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px;">' +
-                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid var(--border-color, #ddd);display:flex;align-items:center;justify-content:center;background:var(--secondary-bg, #f5f5f5);position:relative;cursor:pointer;" onclick="document.getElementById(\'edit-my-avatar-input\').click()">' +
+                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid var(--border-color);display:flex;align-items:center;justify-content:center;background:var(--secondary-bg);position:relative;cursor:pointer;" onclick="document.getElementById(\'edit-my-avatar-input\').click()">' +
                     (myAvatar ? '<img id="edit-my-avatar-preview" src="' + _esc(myAvatar) + '" style="width:100%;height:100%;object-fit:cover;">' : '<span id="edit-my-avatar-preview" style="font-size:28px;">👤</span>') +
                     '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:#fff;font-size:9px;text-align:center;padding:2px 0;">点击更换</div>' +
                 '</div>' +
                 '<input type="file" id="edit-my-avatar-input" accept="image/*" style="display:none;">' +
                 '<div style="width:100%;">' +
-                    '<label style="font-size:12px;color:var(--text-secondary, #999);display:block;margin-bottom:4px;">昵称</label>' +
-                    '<input id="edit-my-name-input" type="text" value="' + _esc(myName) + '" maxlength="12" style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:10px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">昵称</label>' +
+                    '<input id="edit-my-name-input" type="text" value="' + _esc(myName) + '" maxlength="12" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;">' +
                 '</div>' +
                 '<div style="width:100%;display:flex;gap:8px;">' +
-                    '<button onclick="document.getElementById(\'edit-my-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed var(--border-color, #ddd);border-radius:8px;background:transparent;color:var(--text-secondary, #999);font-size:11px;cursor:pointer;-webkit-tap-highlight-color:transparent;">🔗 图片URL</button>' +
-                    '<input id="edit-my-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid var(--border-color, #ddd);border-radius:8px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:11px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<button onclick="document.getElementById(\'edit-my-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed var(--border-color);border-radius:8px;background:transparent;color:var(--text-secondary);font-size:11px;cursor:pointer;">🔗 图片URL</button>' +
+                    '<input id="edit-my-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--secondary-bg);color:var(--text-primary);font-size:11px;box-sizing:border-box;">' +
                 '</div>' +
             '</div>' +
             '<div style="display:flex;gap:10px;">' +
-                '<button id="edit-my-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">取消</button>' +
-                '<button id="edit-my-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">保存</button>' +
+                '<button id="edit-my-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-secondary);font-size:13px;cursor:pointer;">取消</button>' +
+                '<button id="edit-my-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-weight:700;font-size:13px;cursor:pointer;">保存</button>' +
             '</div>';
 
         wrap.appendChild(inner);
@@ -807,121 +865,46 @@
 
         var tempAvatar = myAvatar;
 
-        document.getElementById('edit-my-close').onclick = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-        document.getElementById('edit-my-cancel').onclick = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-        wrap.onclick = function(e) { if (e.target === wrap) { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); } };
+        document.getElementById('edit-my-close').onclick = function() { wrap.remove(); };
+        document.getElementById('edit-my-cancel').onclick = function() { wrap.remove(); };
+        wrap.onclick = function(e) { if (e.target === wrap) wrap.remove(); };
 
         document.getElementById('edit-my-avatar-input').onchange = function(e) {
             var file = e.target.files[0];
             if (!file) return;
-
-            if (file.size < 30 * 1024) {
-                var reader = new FileReader();
-                reader.onload = function(ev) {
-                    tempAvatar = ev.target.result;
-                    var preview = document.getElementById('edit-my-avatar-preview');
-                    if (preview) {
-                        if (preview.tagName === 'IMG') preview.src = ev.target.result;
-                        else preview.innerHTML = '<img src="' + ev.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
-                    }
-                    _notify('✅ 头像已保存 (' + (ev.target.result.length/1024).toFixed(0) + ' KB)', 'info', 1500);
-                };
-                reader.readAsDataURL(file);
-                return;
-            }
-
             var reader = new FileReader();
             reader.onload = function(ev) {
-                var img = new Image();
-                img.onload = function() {
-                    var canvas = document.createElement('canvas');
-                    var maxSize = 200;
-                    var w = img.width, h = img.height;
-                    if (w > maxSize || h > maxSize) {
-                        var ratio = Math.min(maxSize / w, maxSize / h);
-                        w = Math.round(w * ratio);
-                        h = Math.round(h * ratio);
-                    }
-                    canvas.width = w;
-                    canvas.height = h;
-                    var ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    var compressed = canvas.toDataURL('image/jpeg', 0.5);
-                    tempAvatar = compressed;
-                    var preview = document.getElementById('edit-my-avatar-preview');
-                    if (preview) {
-                        if (preview.tagName === 'IMG') preview.src = compressed;
-                        else preview.innerHTML = '<img src="' + compressed + '" style="width:100%;height:100%;object-fit:cover;">';
-                    }
-                    var originalSize = (ev.target.result.length / 1024).toFixed(0);
-                    var compressedSize = (compressed.length / 1024).toFixed(0);
-                    _notify('✅ 已压缩 ' + originalSize + 'KB → ' + compressedSize + 'KB', 'success', 2000);
-                };
-                img.onerror = function() {
-                    tempAvatar = ev.target.result;
-                    var preview = document.getElementById('edit-my-avatar-preview');
-                    if (preview) {
-                        if (preview.tagName === 'IMG') preview.src = ev.target.result;
-                        else preview.innerHTML = '<img src="' + ev.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
-                    }
-                    _notify('⚠️ 压缩失败，使用原图', 'warning', 1500);
-                };
-                img.src = ev.target.result;
+                var data = ev.target.result;
+                tempAvatar = data;
+                var preview = document.getElementById('edit-my-avatar-preview');
+                if (preview) {
+                    if (preview.tagName === 'IMG') preview.src = data;
+                    else preview.innerHTML = '<img src="' + data + '" style="width:100%;height:100%;object-fit:cover;">';
+                }
             };
             reader.readAsDataURL(file);
         };
 
         document.getElementById('edit-my-avatar-url-input').addEventListener('change', function() {
             var url = this.value.trim();
-            if (!url) return;
-            
-            var img = new Image();
-            img.onload = function() {
-                var canvas = document.createElement('canvas');
-                var maxSize = 200;
-                var w = img.width, h = img.height;
-                if (w > maxSize || h > maxSize) {
-                    var ratio = Math.min(maxSize / w, maxSize / h);
-                    w = Math.round(w * ratio);
-                    h = Math.round(h * ratio);
-                }
-                canvas.width = w;
-                canvas.height = h;
-                var ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h);
-                var compressed = canvas.toDataURL('image/jpeg', 0.5);
-                tempAvatar = compressed;
-                var preview = document.getElementById('edit-my-avatar-preview');
-                if (preview) {
-                    if (preview.tagName === 'IMG') preview.src = compressed;
-                    else preview.innerHTML = '<img src="' + compressed + '" style="width:100%;height:100%;object-fit:cover;">';
-                }
-                _notify('✅ 图片已加载并压缩', 'success', 1500);
-            };
-            img.onerror = function() {
+            if (url) {
                 tempAvatar = url;
                 var preview = document.getElementById('edit-my-avatar-preview');
                 if (preview) {
                     if (preview.tagName === 'IMG') preview.src = url;
                     else preview.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;">';
                 }
-                _notify('⚠️ 无法加载图片，请检查URL', 'warning', 1500);
-            };
-            img.src = url;
+            }
         });
 
         document.getElementById('edit-my-save').onclick = function() {
             var name = document.getElementById('edit-my-name-input').value.trim();
             if (!name) { _notify('请输入昵称', 'warning'); return; }
             _setMyNameSetting(name);
-            if (tempAvatar) {
-                _setMyAvatarSetting(tempAvatar);
-                var size = (tempAvatar.length / 1024).toFixed(0);
-                _notify('💾 头像已保存 (' + size + ' KB)', 'success', 1500);
-            }
-            if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+            if (tempAvatar) _setMyAvatarSetting(tempAvatar);
+            wrap.remove();
             var avatarModal = document.getElementById('avatar-settings-modal');
-            if (avatarModal) avatarModal.parentNode && avatarModal.parentNode.removeChild(avatarModal);
+            if (avatarModal) avatarModal.remove();
             showAvatarSettings();
             var container = document.getElementById('moments-content');
             var activeTab = document.querySelector('.moments-tab.active');
@@ -930,12 +913,9 @@
         };
     }
 
-    // =============================================
-    // 编辑成员
-    // =============================================
     function editMember(name) {
         var old = document.getElementById('edit-member-modal');
-        if (old) old.parentNode && old.parentNode.removeChild(old);
+        if (old) old.remove();
 
         var members = _getGroupMembers();
         var member = null;
@@ -946,33 +926,33 @@
 
         var wrap = document.createElement('div');
         wrap.id = 'edit-member-modal';
-        wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10057;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10057;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
 
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);';
         inner.innerHTML =
             '<div style="display:flex;justify-content:space-between;margin-bottom:16px;">' +
-                '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">✏️ 编辑成员</span>' +
-                '<button id="edit-member-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+                '<span style="font-size:18px;font-weight:700;">✏️ 编辑成员</span>' +
+                '<button id="edit-member-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary);">✕</button>' +
             '</div>' +
             '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px;">' +
-                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid var(--border-color, #ddd);display:flex;align-items:center;justify-content:center;background:var(--secondary-bg, #f5f5f5);position:relative;cursor:pointer;" onclick="document.getElementById(\'edit-member-avatar-input\').click()">' +
+                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px solid var(--border-color);display:flex;align-items:center;justify-content:center;background:var(--secondary-bg);position:relative;cursor:pointer;" onclick="document.getElementById(\'edit-member-avatar-input\').click()">' +
                     (member.avatar ? '<img id="edit-member-avatar-preview" src="' + _esc(member.avatar) + '" style="width:100%;height:100%;object-fit:cover;">' : '<span id="edit-member-avatar-preview" style="font-size:28px;">🌸</span>') +
                     '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:#fff;font-size:9px;text-align:center;padding:2px 0;">点击更换</div>' +
                 '</div>' +
                 '<input type="file" id="edit-member-avatar-input" accept="image/*" style="display:none;">' +
                 '<div style="width:100%;">' +
-                    '<label style="font-size:12px;color:var(--text-secondary, #999);display:block;margin-bottom:4px;">昵称</label>' +
-                    '<input id="edit-member-name-input" type="text" value="' + _esc(member.name) + '" maxlength="12" style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:10px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">昵称</label>' +
+                    '<input id="edit-member-name-input" type="text" value="' + _esc(member.name) + '" maxlength="12" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;">' +
                 '</div>' +
                 '<div style="width:100%;display:flex;gap:8px;">' +
-                    '<button onclick="document.getElementById(\'edit-member-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed var(--border-color, #ddd);border-radius:8px;background:transparent;color:var(--text-secondary, #999);font-size:11px;cursor:pointer;-webkit-tap-highlight-color:transparent;">🔗 图片URL</button>' +
-                    '<input id="edit-member-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid var(--border-color, #ddd);border-radius:8px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:11px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<button onclick="document.getElementById(\'edit-member-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed var(--border-color);border-radius:8px;background:transparent;color:var(--text-secondary);font-size:11px;cursor:pointer;">🔗 图片URL</button>' +
+                    '<input id="edit-member-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--secondary-bg);color:var(--text-primary);font-size:11px;box-sizing:border-box;">' +
                 '</div>' +
             '</div>' +
             '<div style="display:flex;gap:10px;">' +
-                '<button id="edit-member-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">取消</button>' +
-                '<button id="edit-member-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">保存</button>' +
+                '<button id="edit-member-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-secondary);font-size:13px;cursor:pointer;">取消</button>' +
+                '<button id="edit-member-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-weight:700;font-size:13px;cursor:pointer;">保存</button>' +
             '</div>';
 
         wrap.appendChild(inner);
@@ -980,62 +960,22 @@
 
         var tempAvatar = member.avatar || '';
 
-        document.getElementById('edit-member-close').onclick = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-        document.getElementById('edit-member-cancel').onclick = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-        wrap.onclick = function(e) { if (e.target === wrap) { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); } };
+        document.getElementById('edit-member-close').onclick = function() { wrap.remove(); };
+        document.getElementById('edit-member-cancel').onclick = function() { wrap.remove(); };
+        wrap.onclick = function(e) { if (e.target === wrap) wrap.remove(); };
 
         document.getElementById('edit-member-avatar-input').onchange = function(e) {
             var file = e.target.files[0];
             if (!file) return;
-
-            if (file.size < 30 * 1024) {
-                var reader = new FileReader();
-                reader.onload = function(ev) {
-                    tempAvatar = ev.target.result;
-                    var preview = document.getElementById('edit-member-avatar-preview');
-                    if (preview) {
-                        if (preview.tagName === 'IMG') preview.src = ev.target.result;
-                        else preview.innerHTML = '<img src="' + ev.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
-                    }
-                };
-                reader.readAsDataURL(file);
-                return;
-            }
-
             var reader = new FileReader();
             reader.onload = function(ev) {
-                var img = new Image();
-                img.onload = function() {
-                    var canvas = document.createElement('canvas');
-                    var maxSize = 200;
-                    var w = img.width, h = img.height;
-                    if (w > maxSize || h > maxSize) {
-                        var ratio = Math.min(maxSize / w, maxSize / h);
-                        w = Math.round(w * ratio);
-                        h = Math.round(h * ratio);
-                    }
-                    canvas.width = w;
-                    canvas.height = h;
-                    var ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    var compressed = canvas.toDataURL('image/jpeg', 0.5);
-                    tempAvatar = compressed;
-                    var preview = document.getElementById('edit-member-avatar-preview');
-                    if (preview) {
-                        if (preview.tagName === 'IMG') preview.src = compressed;
-                        else preview.innerHTML = '<img src="' + compressed + '" style="width:100%;height:100%;object-fit:cover;">';
-                    }
-                    _notify('✅ 头像已压缩', 'success', 1500);
-                };
-                img.onerror = function() {
-                    tempAvatar = ev.target.result;
-                    var preview = document.getElementById('edit-member-avatar-preview');
-                    if (preview) {
-                        if (preview.tagName === 'IMG') preview.src = ev.target.result;
-                        else preview.innerHTML = '<img src="' + ev.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
-                    }
-                };
-                img.src = ev.target.result;
+                var data = ev.target.result;
+                tempAvatar = data;
+                var preview = document.getElementById('edit-member-avatar-preview');
+                if (preview) {
+                    if (preview.tagName === 'IMG') preview.src = data;
+                    else preview.innerHTML = '<img src="' + data + '" style="width:100%;height:100%;object-fit:cover;">';
+                }
             };
             reader.readAsDataURL(file);
         };
@@ -1060,9 +1000,9 @@
                 _updateMemberName(oldName, newName);
             }
             if (tempAvatar) _setMemberAvatar(newName, tempAvatar);
-            if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+            wrap.remove();
             var avatarModal = document.getElementById('avatar-settings-modal');
-            if (avatarModal) avatarModal.parentNode && avatarModal.parentNode.removeChild(avatarModal);
+            if (avatarModal) avatarModal.remove();
             showAvatarSettings();
             var container = document.getElementById('moments-content');
             var activeTab = document.querySelector('.moments-tab.active');
@@ -1071,42 +1011,39 @@
         };
     }
 
-    // =============================================
-    // 添加成员
-    // =============================================
     function addMember() {
         var old = document.getElementById('add-member-modal');
-        if (old) old.parentNode && old.parentNode.removeChild(old);
+        if (old) old.remove();
 
         var wrap = document.createElement('div');
         wrap.id = 'add-member-modal';
-        wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10058;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10058;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
 
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);';
         inner.innerHTML =
             '<div style="display:flex;justify-content:space-between;margin-bottom:16px;">' +
-                '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">➕ 添加成员</span>' +
-                '<button id="add-member-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+                '<span style="font-size:18px;font-weight:700;">➕ 添加成员</span>' +
+                '<button id="add-member-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary);">✕</button>' +
             '</div>' +
             '<div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px;">' +
-                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px dashed var(--border-color, #ddd);display:flex;align-items:center;justify-content:center;background:var(--secondary-bg, #f5f5f5);cursor:pointer;position:relative;" onclick="document.getElementById(\'add-member-avatar-input\').click()">' +
-                    '<span id="add-member-avatar-preview" style="font-size:28px;color:var(--text-secondary, #999);">+</span>' +
+                '<div style="width:64px;height:64px;border-radius:50%;overflow:hidden;border:2px dashed var(--border-color);display:flex;align-items:center;justify-content:center;background:var(--secondary-bg);cursor:pointer;position:relative;" onclick="document.getElementById(\'add-member-avatar-input\').click()">' +
+                    '<span id="add-member-avatar-preview" style="font-size:28px;color:var(--text-secondary);">+</span>' +
                     '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:#fff;font-size:9px;text-align:center;padding:2px 0;">点击上传头像</div>' +
                 '</div>' +
                 '<input type="file" id="add-member-avatar-input" accept="image/*" style="display:none;">' +
                 '<div style="width:100%;">' +
-                    '<label style="font-size:12px;color:var(--text-secondary, #999);display:block;margin-bottom:4px;">成员名字</label>' +
-                    '<input id="add-member-name-input" type="text" placeholder="输入名字" maxlength="12" style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:10px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px;">成员名字</label>' +
+                    '<input id="add-member-name-input" type="text" placeholder="输入名字" maxlength="12" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;">' +
                 '</div>' +
                 '<div style="width:100%;display:flex;gap:8px;">' +
-                    '<button onclick="document.getElementById(\'add-member-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed var(--border-color, #ddd);border-radius:8px;background:transparent;color:var(--text-secondary, #999);font-size:11px;cursor:pointer;-webkit-tap-highlight-color:transparent;">🔗 图片URL</button>' +
-                    '<input id="add-member-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid var(--border-color, #ddd);border-radius:8px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:11px;box-sizing:border-box;font-family:var(--font-family, sans-serif);">' +
+                    '<button onclick="document.getElementById(\'add-member-avatar-url-input\').style.display=\'block\'" style="flex:1;padding:6px;border:1px dashed var(--border-color);border-radius:8px;background:transparent;color:var(--text-secondary);font-size:11px;cursor:pointer;">🔗 图片URL</button>' +
+                    '<input id="add-member-avatar-url-input" type="text" placeholder="输入图片URL" style="display:none;flex:1;padding:6px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--secondary-bg);color:var(--text-primary);font-size:11px;box-sizing:border-box;">' +
                 '</div>' +
             '</div>' +
             '<div style="display:flex;gap:10px;">' +
-                '<button id="add-member-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">取消</button>' +
-                '<button id="add-member-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;">保存</button>' +
+                '<button id="add-member-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-secondary);font-size:13px;cursor:pointer;">取消</button>' +
+                '<button id="add-member-save" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-weight:700;font-size:13px;cursor:pointer;">保存</button>' +
             '</div>';
 
         wrap.appendChild(inner);
@@ -1114,53 +1051,21 @@
 
         var tempAvatar = '';
 
-        document.getElementById('add-member-close').onclick = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-        document.getElementById('add-member-cancel').onclick = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-        wrap.onclick = function(e) { if (e.target === wrap) { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); } };
+        document.getElementById('add-member-close').onclick = function() { wrap.remove(); };
+        document.getElementById('add-member-cancel').onclick = function() { wrap.remove(); };
+        wrap.onclick = function(e) { if (e.target === wrap) wrap.remove(); };
 
         document.getElementById('add-member-avatar-input').onchange = function(e) {
             var file = e.target.files[0];
             if (!file) return;
-
-            if (file.size < 30 * 1024) {
-                var reader = new FileReader();
-                reader.onload = function(ev) {
-                    tempAvatar = ev.target.result;
-                    var preview = document.getElementById('add-member-avatar-preview');
-                    if (preview) preview.innerHTML = '<img src="' + ev.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
-                };
-                reader.readAsDataURL(file);
-                return;
-            }
-
             var reader = new FileReader();
             reader.onload = function(ev) {
-                var img = new Image();
-                img.onload = function() {
-                    var canvas = document.createElement('canvas');
-                    var maxSize = 200;
-                    var w = img.width, h = img.height;
-                    if (w > maxSize || h > maxSize) {
-                        var ratio = Math.min(maxSize / w, maxSize / h);
-                        w = Math.round(w * ratio);
-                        h = Math.round(h * ratio);
-                    }
-                    canvas.width = w;
-                    canvas.height = h;
-                    var ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    var compressed = canvas.toDataURL('image/jpeg', 0.5);
-                    tempAvatar = compressed;
-                    var preview = document.getElementById('add-member-avatar-preview');
-                    if (preview) preview.innerHTML = '<img src="' + compressed + '" style="width:100%;height:100%;object-fit:cover;">';
-                    _notify('✅ 头像已压缩', 'success', 1500);
-                };
-                img.onerror = function() {
-                    tempAvatar = ev.target.result;
-                    var preview = document.getElementById('add-member-avatar-preview');
-                    if (preview) preview.innerHTML = '<img src="' + ev.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
-                };
-                img.src = ev.target.result;
+                var data = ev.target.result;
+                tempAvatar = data;
+                var preview = document.getElementById('add-member-avatar-preview');
+                if (preview) {
+                    preview.innerHTML = '<img src="' + data + '" style="width:100%;height:100%;object-fit:cover;">';
+                }
             };
             reader.readAsDataURL(file);
         };
@@ -1170,7 +1075,9 @@
             if (url) {
                 tempAvatar = url;
                 var preview = document.getElementById('add-member-avatar-preview');
-                if (preview) preview.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;">';
+                if (preview) {
+                    preview.innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover;">';
+                }
             }
         });
 
@@ -1185,9 +1092,9 @@
                 }
             }
             _addGroupMember(name, tempAvatar);
-            if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
+            wrap.remove();
             var avatarModal = document.getElementById('avatar-settings-modal');
-            if (avatarModal) avatarModal.parentNode && avatarModal.parentNode.removeChild(avatarModal);
+            if (avatarModal) avatarModal.remove();
             showAvatarSettings();
             var container = document.getElementById('moments-content');
             var activeTab = document.querySelector('.moments-tab.active');
@@ -1200,7 +1107,7 @@
         if (!confirm('确定要删除成员 "' + name + '" 吗？\n该成员的所有动态也将被删除。')) return;
         _removeGroupMember(name);
         var avatarModal = document.getElementById('avatar-settings-modal');
-        if (avatarModal) avatarModal.parentNode && avatarModal.parentNode.removeChild(avatarModal);
+        if (avatarModal) avatarModal.remove();
         showAvatarSettings();
         var container = document.getElementById('moments-content');
         var activeTab = document.querySelector('.moments-tab.active');
@@ -1210,26 +1117,26 @@
 
     function showReplyModal(postId, commentId) {
         var old = document.getElementById('reply-modal');
-        if (old) old.parentNode && old.parentNode.removeChild(old);
+        if (old) old.remove();
 
         var wrap = document.createElement('div');
         wrap.id = 'reply-modal';
-        wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10035;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10035;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
-            '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">💬 回复</span>' +
-            '<button id="reply-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+            '<span style="font-size:18px;font-weight:700;">💬 回复</span>' +
+            '<button id="reply-close" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>' +
             '</div>' +
-            '<textarea id="reply-text" rows="3" placeholder="写下你的回复..." style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;resize:vertical;box-sizing:border-box;font-family:var(--font-family, sans-serif);-webkit-appearance:none;"></textarea>' +
+            '<textarea id="reply-text" rows="3" placeholder="写下你的回复..." style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-primary);font-size:14px;resize:vertical;box-sizing:border-box;font-family:var(--font-family);"></textarea>' +
             '<div style="display:flex;gap:10px;margin-top:12px;">' +
-            '<button id="reply-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">取消</button>' +
-            '<button id="reply-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">发送</button>' +
+            '<button id="reply-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-secondary);cursor:pointer;">取消</button>' +
+            '<button id="reply-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-weight:700;cursor:pointer;">发送</button>' +
             '</div>';
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
 
-        var close = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+        var close = function() { wrap.remove(); };
         document.getElementById('reply-close').onclick = close;
         document.getElementById('reply-cancel').onclick = close;
         wrap.onclick = function(e) { if (e.target === wrap) close(); };
@@ -1237,198 +1144,37 @@
         document.getElementById('reply-submit').onclick = function() {
             var text = document.getElementById('reply-text').value.trim();
             if (!text) { _notify('请输入回复内容', 'warning'); return; }
-            
-            var data = _getData();
-            var post = data.posts.find(function(p) { return p.id === postId; });
-            if (!post) { _notify('帖子不存在', 'error'); return; }
-            
-            var comment = post.comments.find(function(c) { return c.id === commentId; });
-            if (!comment) { _notify('评论不存在', 'error'); return; }
-            
-            if (comment.author === 'partner' && !comment.replied) {
-                comment.reply = {
-                    text: text,
-                    timestamp: new Date().toISOString(),
-                    authorName: _getMyNameSetting()
-                };
-                comment.replied = true;
-                _setData(data);
-                close();
-                _refreshUI();
-                _notify('回复已发送', 'success');
-                _schedulePartnerInteraction(postId, 'reply', commentId);
-                return;
-            }
-            
-            comment.reply = {
-                text: text,
-                timestamp: new Date().toISOString(),
-                authorName: _getMyNameSetting()
-            };
-            comment.replied = true;
-            _setData(data);
+            _addReplyToComment(postId, commentId, text);
             close();
-            _refreshUI();
+            var container = document.getElementById('moments-content');
+            var activeTab = document.querySelector('.moments-tab.active');
+            if (container && activeTab) renderTab(activeTab.dataset.tab, container);
             _notify('回复已发送', 'success');
         };
     }
 
-    function renderTab(tab, container) {
-        var posts = _getPosts();
-        var filtered = [];
-        for (var i = 0; i < posts.length; i++) {
-            if (posts[i].author === tab) filtered.push(posts[i]);
-        }
-        if (filtered.length === 0) {
-            container.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-secondary, #999);">' +
-                '<div style="font-size:48px;margin-bottom:16px;">📭</div>' +
-                '<div style="font-size:15px;font-weight:500;">还没有动态</div>' +
-                '<div style="font-size:13px;opacity:0.6;margin-top:4px;">' + (tab === 'me' ? '点击右下角 + 发布你的第一条吧' : '成员们还没有发过动态哦') + '</div>' +
-                '</div>';
-            return;
-        }
-
-        var html = '';
-        for (var pi = 0; pi < filtered.length; pi++) {
-            var post = filtered[pi];
-            var isMe = post.author === 'me';
-            var name, avatarHtml;
-
-            if (isMe) {
-                name = _getMyNameSetting();
-                var myAvatar = _getMyAvatarSetting();
-                if (myAvatar) {
-                    avatarHtml = '<img src="' + _esc(myAvatar) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border-color, #eee);">';
-                } else {
-                    avatarHtml = '👤';
-                }
-            } else {
-                name = post.memberName || _getPartnerName();
-                var memberAvatar = _getMemberAvatar(name);
-                var finalAvatar = memberAvatar || post.memberAvatar || '';
-                if (finalAvatar) {
-                    avatarHtml = '<img src="' + _esc(finalAvatar) + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border-color, #eee);">';
-                } else {
-                    avatarHtml = '🌸';
-                }
-            }
-            var time = formatTime(post.timestamp);
-            var commentCount = post.comments.length;
-
-            html += '<div class="moments-post" data-id="' + post.id + '" style="background:rgba(255,255,255,0.85);border-radius:16px;padding:16px 16px 12px;margin-bottom:14px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 1px 4px rgba(0,0,0,0.04);">' +
-                '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">' +
-                    '<span style="font-size:20px;display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex-shrink:0;">' + avatarHtml + '</span>' +
-                    '<span style="font-weight:600;color:var(--text-primary, #222);font-size:15px;">' + _esc(name) + '</span>' +
-                    '<span style="font-size:12px;color:var(--text-secondary, #999);margin-left:auto;">' + time + '</span>' +
-                '</div>' +
-                '<div style="font-size:16px;color:var(--text-primary, #222);margin:4px 0 12px;word-wrap:break-word;line-height:1.7;padding-left:2px;">' + _esc(post.text) + '</div>' +
-                '<div style="display:flex;gap:20px;align-items:center;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px;">' +
-                    '<button class="moments-like-btn" data-id="' + post.id + '" style="background:none;border:none;color:' + (post.likedByMe ? 'var(--accent-color, #000)' : 'var(--text-secondary, #999)') + ';font-size:14px;cursor:pointer;padding:4px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;' + (post.likedByMe ? 'background:rgba(var(--accent-color-rgb, 0,0,0),0.08);' : '') + '-webkit-tap-highlight-color:transparent;">' +
-                        (post.likedByMe ? '❤️' : '🤍') + ' <span>' + post.likes + '</span>' +
-                    '</button>' +
-                    '<button class="moments-comment-btn" data-id="' + post.id + '" style="background:none;border:none;color:var(--text-secondary, #999);font-size:14px;cursor:pointer;padding:4px 8px;border-radius:12px;display:flex;align-items:center;gap:4px;-webkit-tap-highlight-color:transparent;">' +
-                        '💬 <span>' + commentCount + '</span>' +
-                    '</button>' +
-                    (isMe ? '<button class="moments-delete-btn" data-id="' + post.id + '" style="background:none;border:none;color:#ff6b6b;font-size:13px;cursor:pointer;padding:4px 8px;border-radius:12px;margin-left:auto;-webkit-tap-highlight-color:transparent;">🗑️</button>' : '') +
-                '</div>' +
-                (post.comments.length > 0 ? '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(0,0,0,0.06);">' : '');
-
-            for (var ci = 0; ci < post.comments.length; ci++) {
-                var c = post.comments[ci];
-                var cName = c.author === 'me' ? _getMyNameSetting() : (c.authorName || _getPartnerName());
-                var cAvatar = c.author === 'me' ? '👤' : '🌸';
-                var cTime = formatTime(c.timestamp);
-
-                html += '<div style="margin-bottom:8px;padding:4px 0;">' +
-                    '<div style="display:flex;align-items:flex-start;gap:4px;flex-wrap:wrap;">' +
-                        '<span style="font-weight:600;font-size:13px;color:var(--text-primary, #222);">' + cAvatar + ' ' + _esc(cName) + '</span> ' +
-                        '<span style="color:var(--text-primary, #222);font-size:13px;">' + _esc(c.text) + '</span> ' +
-                        '<span style="font-size:10px;color:var(--text-secondary, #999);">' + cTime + '</span>' +
-                        '<button class="moments-reply-to-comment" data-postid="' + post.id + '" data-commentid="' + c.id + '" style="background:none;border:none;color:var(--accent-color, #000);font-size:11px;cursor:pointer;padding:0 4px;opacity:0.6;-webkit-tap-highlight-color:transparent;">回复</button>' +
-                    '</div>';
-
-                if (c.reply) {
-                    var replyName = c.reply.authorName || _getPartnerName();
-                    html += '<div style="margin-left:20px;margin-top:2px;padding:6px 12px;background:rgba(var(--accent-color-rgb, 0,0,0),0.05);border-radius:8px;border-left:2px solid rgba(var(--accent-color-rgb, 0,0,0),0.2);font-size:13px;color:var(--text-secondary, #999);">' +
-                        '<span style="font-weight:500;color:var(--text-primary, #222);">🌸 ' + _esc(replyName) + '</span> ' +
-                        '<span style="color:var(--text-primary, #222);">' + _esc(c.reply.text) + '</span> ' +
-                        '<span style="font-size:10px;color:var(--text-secondary, #999);">' + formatTime(c.reply.timestamp) + '</span>' +
-                        '</div>';
-                }
-                html += '</div>';
-            }
-
-            if (post.comments.length > 0) {
-                html += '</div>';
-            }
-            html += '</div>';
-        }
-
-        container.innerHTML = html;
-
-        container.querySelectorAll('.moments-like-btn').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                var id = this.dataset.id;
-                _toggleLike(id);
-                var activeTab = document.querySelector('.moments-tab.active');
-                if (activeTab) renderTab(activeTab.dataset.tab, container);
-            });
-        });
-
-        container.querySelectorAll('.moments-comment-btn').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                var postId = this.dataset.id;
-                showCommentModal(postId);
-            });
-        });
-
-        container.querySelectorAll('.moments-reply-to-comment').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                var postId = this.dataset.postid;
-                var commentId = this.dataset.commentid;
-                showReplyModal(postId, commentId);
-            });
-        });
-
-        container.querySelectorAll('.moments-delete-btn').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                var id = this.dataset.id;
-                if (confirm('确定要删除这条动态吗？')) {
-                    _deletePost(id);
-                    var activeTab = document.querySelector('.moments-tab.active');
-                    if (activeTab) renderTab(activeTab.dataset.tab, container);
-                    _notify('已删除', 'info');
-                }
-            });
-        });
-    }
-
     function showPublishModal() {
         var old = document.getElementById('publish-modal');
-        if (old) old.parentNode && old.parentNode.removeChild(old);
+        if (old) old.remove();
 
         var wrap = document.createElement('div');
         wrap.id = 'publish-modal';
-        wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10020;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10020;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
-            '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">📝 发布新动态</span>' +
-            '<button id="publish-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+            '<span style="font-size:18px;font-weight:700;">📝 发布新动态</span>' +
+            '<button id="publish-close" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>' +
             '</div>' +
-            '<textarea id="publish-text" rows="4" placeholder="此刻的想法..." style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;resize:vertical;box-sizing:border-box;font-family:var(--font-family, sans-serif);-webkit-appearance:none;"></textarea>' +
+            '<textarea id="publish-text" rows="4" placeholder="此刻的想法..." style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-primary);font-size:14px;resize:vertical;box-sizing:border-box;font-family:var(--font-family);"></textarea>' +
             '<div style="display:flex;gap:10px;margin-top:12px;">' +
-            '<button id="publish-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">取消</button>' +
-            '<button id="publish-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">发布</button>' +
+            '<button id="publish-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-secondary);cursor:pointer;">取消</button>' +
+            '<button id="publish-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-weight:700;cursor:pointer;">发布</button>' +
             '</div>';
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
 
-        var close = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+        var close = function() { wrap.remove(); };
         document.getElementById('publish-close').onclick = close;
         document.getElementById('publish-cancel').onclick = close;
         wrap.onclick = function(e) { if (e.target === wrap) close(); };
@@ -1436,48 +1182,37 @@
         document.getElementById('publish-submit').onclick = function() {
             var text = document.getElementById('publish-text').value.trim();
             if (!text) { _notify('请输入内容', 'warning'); return; }
-            var post = _addPost('me', text);
+            _addPost('me', text);
             close();
             var container = document.getElementById('moments-content');
             var activeTab = document.querySelector('.moments-tab.active');
             if (container && activeTab) renderTab(activeTab.dataset.tab, container);
             _notify('发布成功 ✨', 'success');
-            
-            var postId = post.id;
-            setTimeout(function() {
-                _schedulePartnerInteraction(postId, 'like');
-            }, 60000 + Math.random() * 120000);
-            setTimeout(function() {
-                _schedulePartnerInteraction(postId, 'comment');
-            }, 180000 + Math.random() * 120000);
-            setTimeout(function() {
-                _schedulePartnerInteraction(postId, 'comment');
-            }, 240000 + Math.random() * 180000);
         };
     }
 
     function showCommentModal(postId) {
         var old = document.getElementById('comment-modal');
-        if (old) old.parentNode && old.parentNode.removeChild(old);
+        if (old) old.remove();
 
         var wrap = document.createElement('div');
         wrap.id = 'comment-modal';
-        wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10030;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10030;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);';
         var inner = document.createElement('div');
-        inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:24px;width:340px;max-width:90%;border:1px solid var(--border-color, #ddd);max-height:90%;overflow-y:auto;';
+        inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:24px;width:min(380px, 90vw);border:1px solid var(--border-color);';
         inner.innerHTML = '<div style="display:flex;justify-content:space-between;margin-bottom:14px;">' +
-            '<span style="font-size:18px;font-weight:700;color:var(--text-primary, #222);">💬 评论</span>' +
-            '<button id="comment-close" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary, #999);-webkit-tap-highlight-color:transparent;">✕</button>' +
+            '<span style="font-size:18px;font-weight:700;">💬 评论</span>' +
+            '<button id="comment-close" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>' +
             '</div>' +
-            '<textarea id="comment-text" rows="3" placeholder="写下你的评论..." style="width:100%;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-primary, #222);font-size:14px;resize:vertical;box-sizing:border-box;font-family:var(--font-family, sans-serif);-webkit-appearance:none;"></textarea>' +
+            '<textarea id="comment-text" rows="3" placeholder="写下你的评论..." style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-primary);font-size:14px;resize:vertical;box-sizing:border-box;font-family:var(--font-family);"></textarea>' +
             '<div style="display:flex;gap:10px;margin-top:12px;">' +
-            '<button id="comment-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color, #ddd);border-radius:12px;background:var(--secondary-bg, #f5f5f5);color:var(--text-secondary, #666);cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">取消</button>' +
-            '<button id="comment-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color, #000);color:#fff;font-weight:700;cursor:pointer;font-family:var(--font-family, sans-serif);-webkit-tap-highlight-color:transparent;">发送</button>' +
+            '<button id="comment-cancel" style="flex:1;padding:10px;border:1px solid var(--border-color);border-radius:12px;background:var(--secondary-bg);color:var(--text-secondary);cursor:pointer;">取消</button>' +
+            '<button id="comment-submit" style="flex:2;padding:10px;border:none;border-radius:12px;background:var(--accent-color);color:#fff;font-weight:700;cursor:pointer;">发送</button>' +
             '</div>';
         wrap.appendChild(inner);
         document.body.appendChild(wrap);
 
-        var close = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+        var close = function() { wrap.remove(); };
         document.getElementById('comment-close').onclick = close;
         document.getElementById('comment-cancel').onclick = close;
         wrap.onclick = function(e) { if (e.target === wrap) close(); };
@@ -1486,21 +1221,15 @@
             var text = document.getElementById('comment-text').value.trim();
             if (!text) { _notify('请输入评论', 'warning'); return; }
 
-            var data = _getData();
-            var post = data.posts.find(function(p) { return p.id === postId; });
+            var posts = _getPosts();
+            var post = null;
+            for (var i = 0; i < posts.length; i++) {
+                if (posts[i].id === postId) { post = posts[i]; break; }
+            }
             if (!post) { _notify('帖子不存在', 'error'); return; }
 
-            var comment = {
-                id: _generateId(),
-                author: 'me',
-                authorName: _getMyNameSetting(),
-                text: text,
-                timestamp: new Date().toISOString(),
-                reply: null,
-                replied: false
-            };
-            post.comments.push(comment);
-            _setData(data);
+            var comment = _addComment(postId, 'me', text);
+            if (!comment) { _notify('评论失败', 'error'); return; }
 
             close();
             var container = document.getElementById('moments-content');
@@ -1509,10 +1238,34 @@
             _notify('评论已发送', 'success');
 
             if (post.author === 'partner') {
-                var commentId = comment.id;
+                var delay = 3000 + Math.random() * 180000;
                 setTimeout(function() {
-                    _schedulePartnerInteraction(postId, 'reply', commentId);
-                }, 120000 + Math.random() * 120000);
+                    var freshPosts = _getPosts();
+                    var freshPost = null;
+                    for (var fi = 0; fi < freshPosts.length; fi++) {
+                        if (freshPosts[fi].id === postId) { freshPost = freshPosts[fi]; break; }
+                    }
+                    if (!freshPost) return;
+                    var latestComment = freshPost.comments[freshPost.comments.length - 1];
+                    if (latestComment && latestComment.author === 'me' && !latestComment.replied) {
+                        var cards = _getReplyCards();
+                        var count = 1 + Math.floor(Math.random() * 3);
+                        var shuffled = cards.slice();
+                        for (var si = shuffled.length - 1; si > 0; si--) {
+                            var sj = Math.floor(Math.random() * (si + 1));
+                            var st = shuffled[si];
+                            shuffled[si] = shuffled[sj];
+                            shuffled[sj] = st;
+                        }
+                        var picked = shuffled.slice(0, count);
+                        var replyText = picked.join('');
+                        _addReplyToComment(postId, latestComment.id, replyText);
+                        _notify('💬 ' + _getPartnerName() + ' 回复了你的评论', 'info', 3000);
+                        var container2 = document.getElementById('moments-content');
+                        var activeTab2 = document.querySelector('.moments-tab.active');
+                        if (container2 && activeTab2) renderTab(activeTab2.dataset.tab, container2);
+                    }
+                }, delay);
             }
         };
     }
@@ -1521,189 +1274,149 @@
     // 朋友圈主界面
     // =============================================
     window.openMoments = function() {
-        try {
-            var existingModal = document.getElementById('moments-modal');
-            if (existingModal && existingModal.parentNode) {
-                existingModal.parentNode.removeChild(existingModal);
-            }
+        _forceGeneratePartnerPosts();
 
-            // 🔥 每次打开朋友圈都强制生成动态
-            _forceGeneratePartnerPosts();
+        var old = document.getElementById('moments-modal');
+        if (old) old.remove();
 
-            var wrap = document.createElement('div');
-            wrap.id = 'moments-modal';
-            wrap.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10010;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);';
+        var wrap = document.createElement('div');
+        wrap.id = 'moments-modal';
+        wrap.style.cssText = 'position:fixed;inset:0;z-index:10010;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);';
 
-            var inner = document.createElement('div');
-            inner.style.cssText = 'background:var(--primary-bg, #fff);border-radius:20px;padding:0;width:420px;max-width:94%;max-height:85%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);border:1px solid var(--border-color, rgba(0,0,0,0.1));';
+        var inner = document.createElement('div');
+        inner.style.cssText = 'background:var(--primary-bg);border-radius:20px;padding:0;width:min(460px, 94vw);max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);border:1px solid var(--border-color);';
 
-            var coverUrl = _getCoverImage();
-            var defaultCover = 'linear-gradient(135deg, #2d1b3d 0%, #1a1a2e 50%, #16213e 100%)';
-            var coverStyle = coverUrl ? 'url(' + coverUrl + ')' : defaultCover;
+        // ===== 顶部封面区域 =====
+        var coverUrl = _getCoverImage();
+        var defaultCover = 'linear-gradient(135deg, #2d1b3d 0%, #1a1a2e 50%, #16213e 100%)';
+        var coverStyle = coverUrl ? 'url(' + coverUrl + ')' : defaultCover;
 
-            var coverSection = document.createElement('div');
-            coverSection.id = 'moments-cover';
-            coverSection.style.cssText = 'position:relative;width:100%;height:160px;background:' + coverStyle + ';background-size:cover;background-position:center;flex-shrink:0;cursor:pointer;-webkit-tap-highlight-color:transparent;';
+        var coverSection = document.createElement('div');
+        coverSection.id = 'moments-cover';
+        coverSection.style.cssText = 'position:relative;width:100%;height:160px;background:' + coverStyle + ';background-size:cover;background-position:center;flex-shrink:0;cursor:pointer;transition:background 0.3s ease;';
 
-            var coverText = document.createElement('div');
-            coverText.style.cssText = 'position:absolute;bottom:16px;left:18px;right:18px;color:rgba(255,255,255,0.95);text-shadow:0 2px 16px rgba(0,0,0,0.4);';
-            coverText.innerHTML =
-                '<div style="font-size:17px;font-weight:300;letter-spacing:2px;font-style:italic;line-height:1.5;">誓言是一场有时差的雨。</div>' +
-                '<div style="font-size:11px;opacity:0.6;margin-top:2px;letter-spacing:1.5px;font-weight:300;">— Vow is a rain with time difference.</div>';
-            coverSection.appendChild(coverText);
+        var coverText = document.createElement('div');
+        coverText.style.cssText = 'position:absolute;bottom:16px;left:18px;right:18px;color:rgba(255,255,255,0.95);text-shadow:0 2px 16px rgba(0,0,0,0.4);';
+        coverText.innerHTML =
+            '<div style="font-size:17px;font-weight:300;letter-spacing:2px;font-style:italic;line-height:1.5;">誓言是一场有时差的雨。</div>' +
+            '<div style="font-size:11px;opacity:0.6;margin-top:2px;letter-spacing:1.5px;font-weight:300;">— Vow is a rain with time difference.</div>';
+        coverSection.appendChild(coverText);
 
-            var coverBtnHint = document.createElement('div');
-            coverBtnHint.style.cssText = 'position:absolute;top:12px;right:14px;background:rgba(0,0,0,0.45);padding:4px 12px;border-radius:14px;font-size:11px;color:rgba(255,255,255,0.85);pointer-events:none;';
-            coverBtnHint.textContent = '📷 更换封面';
-            coverSection.appendChild(coverBtnHint);
+        var coverBtnHint = document.createElement('div');
+        coverBtnHint.style.cssText = 'position:absolute;top:12px;right:14px;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);padding:4px 12px;border-radius:14px;font-size:11px;color:rgba(255,255,255,0.85);pointer-events:none;';
+        coverBtnHint.textContent = '📷 更换封面';
+        coverSection.appendChild(coverBtnHint);
 
-            coverSection.addEventListener('click', function(e) {
-                e.stopPropagation();
-                showCoverSettings();
-            });
+        coverSection.addEventListener('click', function() {
+            showCoverSettings();
+        });
 
-            inner.appendChild(coverSection);
+        inner.appendChild(coverSection);
 
-            var header = document.createElement('div');
-            header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid var(--border-color, #eee);flex-shrink:0;background:var(--primary-bg, #fff);';
+        // ===== 标题栏 =====
+        var header = document.createElement('div');
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:14px 18px 10px;border-bottom:1px solid var(--border-color);flex-shrink:0;background:var(--primary-bg);';
 
-            var leftSection = document.createElement('div');
-            leftSection.style.cssText = 'display:flex;align-items:center;gap:8px;';
-            var backBtn = document.createElement('button');
-            backBtn.style.cssText = 'background:none;border:none;font-size:24px;font-weight:bold;color:var(--text-secondary, #666);cursor:pointer;padding:4px;border-radius:8px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;';
-            backBtn.textContent = '‹';
-            backBtn.onclick = function() { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-            leftSection.appendChild(backBtn);
+        var leftSection = document.createElement('div');
+        leftSection.style.cssText = 'display:flex;align-items:center;gap:8px;';
+        var backBtn = document.createElement('button');
+        backBtn.style.cssText = 'background:none;border:none;font-size:16px;color:var(--text-secondary);cursor:pointer;padding:4px;border-radius:8px;display:flex;align-items:center;justify-content:center;';
+        backBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
+        backBtn.onclick = function() { wrap.remove(); };
+        leftSection.appendChild(backBtn);
 
-            var titleSpan = document.createElement('span');
-            titleSpan.style.cssText = 'font-size:17px;font-weight:700;color:var(--text-primary, #222);';
-            titleSpan.textContent = '📱 朋友圈';
-            leftSection.appendChild(titleSpan);
-            header.appendChild(leftSection);
+        var titleSpan = document.createElement('span');
+        titleSpan.style.cssText = 'font-size:17px;font-weight:700;color:var(--text-primary);';
+        titleSpan.textContent = '📱 朋友圈';
+        leftSection.appendChild(titleSpan);
+        header.appendChild(leftSection);
 
-            var rightSection = document.createElement('div');
-            rightSection.style.cssText = 'display:flex;gap:6px;align-items:center;';
+        var rightSection = document.createElement('div');
+        rightSection.style.cssText = 'display:flex;gap:6px;align-items:center;';
 
-            var avatarBtn = document.createElement('button');
-            avatarBtn.style.cssText = 'background:none;border:none;font-size:16px;color:var(--text-secondary, #666);cursor:pointer;padding:4px 6px;border-radius:8px;-webkit-tap-highlight-color:transparent;';
-            avatarBtn.innerHTML = '👤';
-            avatarBtn.title = '头像与昵称';
-            avatarBtn.onclick = function(e) {
-                e.stopPropagation();
-                showAvatarSettings();
-            };
-            rightSection.appendChild(avatarBtn);
+        var avatarBtn = document.createElement('button');
+        avatarBtn.style.cssText = 'background:none;border:none;font-size:16px;color:var(--text-secondary);cursor:pointer;padding:4px 6px;border-radius:8px;';
+        avatarBtn.innerHTML = '<i class="fas fa-user-circle"></i>';
+        avatarBtn.title = '头像与昵称';
+        avatarBtn.onclick = function(e) {
+            e.stopPropagation();
+            showAvatarSettings();
+        };
+        rightSection.appendChild(avatarBtn);
 
-            var bgBtn = document.createElement('button');
-            bgBtn.style.cssText = 'background:none;border:none;font-size:14px;color:var(--text-secondary, #666);cursor:pointer;padding:4px 6px;border-radius:8px;-webkit-tap-highlight-color:transparent;';
-            bgBtn.innerHTML = '🖼️';
-            bgBtn.title = '更换封面';
-            bgBtn.onclick = function(e) {
-                e.stopPropagation();
-                showCoverSettings();
-            };
-            rightSection.appendChild(bgBtn);
-            header.appendChild(rightSection);
-            inner.appendChild(header);
+        var bgBtn = document.createElement('button');
+        bgBtn.style.cssText = 'background:none;border:none;font-size:14px;color:var(--text-secondary);cursor:pointer;padding:4px 6px;border-radius:8px;';
+        bgBtn.innerHTML = '<i class="fas fa-image"></i>';
+        bgBtn.title = '更换封面';
+        bgBtn.onclick = function(e) {
+            e.stopPropagation();
+            showCoverSettings();
+        };
+        rightSection.appendChild(bgBtn);
+        header.appendChild(rightSection);
+        inner.appendChild(header);
 
-            var tabBar = document.createElement('div');
-            tabBar.style.cssText = 'display:flex;border-bottom:1px solid var(--border-color, #eee);flex-shrink:0;background:var(--primary-bg, #fff);padding:0 16px;';
-            tabBar.innerHTML = '<button class="moments-tab active" data-tab="me" style="flex:1;padding:12px 4px 10px;border:none;background:transparent;font-weight:600;color:var(--text-primary, #222);cursor:pointer;font-size:14px;position:relative;border-bottom:2px solid var(--accent-color, #000);-webkit-tap-highlight-color:transparent;font-family:var(--font-family, sans-serif);">我的</button>' +
-                '<button class="moments-tab" data-tab="partner" style="flex:1;padding:12px 4px 10px;border:none;background:transparent;font-weight:400;color:var(--text-secondary, #999);cursor:pointer;font-size:14px;position:relative;border-bottom:2px solid transparent;-webkit-tap-highlight-color:transparent;font-family:var(--font-family, sans-serif);">群成员</button>';
-            inner.appendChild(tabBar);
+        // ===== Tab切换 =====
+        var tabBar = document.createElement('div');
+        tabBar.style.cssText = 'display:flex;border-bottom:1px solid rgba(var(--border-color-rgb,0,0,0),0.08);flex-shrink:0;background:var(--primary-bg);padding:0 16px;';
+        tabBar.innerHTML = '<button class="moments-tab active" data-tab="me" style="flex:1;padding:12px 4px 10px;border:none;background:transparent;font-weight:600;color:var(--text-primary);cursor:pointer;font-family:var(--font-family);font-size:14px;position:relative;border-bottom:2px solid var(--accent-color);">我的</button>' +
+            '<button class="moments-tab" data-tab="partner" style="flex:1;padding:12px 4px 10px;border:none;background:transparent;font-weight:400;color:var(--text-secondary);cursor:pointer;font-family:var(--font-family);font-size:14px;position:relative;border-bottom:2px solid transparent;">群成员</button>';
+        inner.appendChild(tabBar);
 
-            var contentContainer = document.createElement('div');
-            contentContainer.id = 'moments-content';
-            contentContainer.style.cssText = 'flex:1;overflow-y:auto;padding:12px 16px 16px;background:var(--secondary-bg, #f5f5f5);-webkit-overflow-scrolling:touch;';
+        // ===== 内容列表 =====
+        var contentContainer = document.createElement('div');
+        contentContainer.id = 'moments-content';
+        contentContainer.style.cssText = 'flex:1;overflow-y:auto;padding:12px 16px 16px;background:var(--secondary-bg);';
 
-            renderTab('me', contentContainer);
-            inner.appendChild(contentContainer);
+        renderTab('me', contentContainer);
+        inner.appendChild(contentContainer);
 
-            var footer = document.createElement('div');
-            footer.style.cssText = 'display:flex;justify-content:flex-end;padding:10px 16px 14px;border-top:1px solid var(--border-color, #eee);flex-shrink:0;background:var(--primary-bg, #fff);';
-            var addBtn = document.createElement('button');
-            addBtn.id = 'moments-add-btn';
-            addBtn.style.cssText = 'width:38px;height:38px;border-radius:50%;background:var(--accent-color, #000);color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.2);-webkit-tap-highlight-color:transparent;';
-            addBtn.textContent = '+';
-            addBtn.title = '发布新动态';
-            addBtn.onclick = function() { showPublishModal(); };
-            footer.appendChild(addBtn);
-            inner.appendChild(footer);
+        // ===== 底部发布按钮 =====
+        var footer = document.createElement('div');
+        footer.style.cssText = 'display:flex;justify-content:flex-end;padding:10px 16px 14px;border-top:1px solid var(--border-color);flex-shrink:0;background:rgba(var(--primary-bg-rgb),0.95);backdrop-filter:blur(8px);';
+        var addBtn = document.createElement('button');
+        addBtn.id = 'moments-add-btn';
+        addBtn.style.cssText = 'width:38px;height:38px;border-radius:50%;background:#000;color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.2);';
+        addBtn.textContent = '+';
+        addBtn.title = '发布新动态';
+        addBtn.onclick = function() { showPublishModal(); };
+        footer.appendChild(addBtn);
+        inner.appendChild(footer);
 
-            wrap.appendChild(inner);
-            document.body.appendChild(wrap);
+        wrap.appendChild(inner);
+        document.body.appendChild(wrap);
 
-            wrap.addEventListener('click', function(e) {
-                if (e.target === wrap && wrap.parentNode) {
-                    wrap.parentNode.removeChild(wrap);
-                }
-            });
-
-            tabBar.querySelectorAll('.moments-tab').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    tabBar.querySelectorAll('.moments-tab').forEach(function(b) {
-                        b.classList.remove('active');
-                        b.style.color = 'var(--text-secondary, #999)';
-                        b.style.borderBottom = '2px solid transparent';
-                        b.style.fontWeight = '400';
-                    });
-                    this.classList.add('active');
-                    this.style.color = 'var(--text-primary, #222)';
-                    this.style.borderBottom = '2px solid var(--accent-color, #000)';
-                    this.style.fontWeight = '600';
-                    var tab = this.dataset.tab;
-                    renderTab(tab, contentContainer);
-                    var addBtnEl = document.getElementById('moments-add-btn');
-                    if (addBtnEl) addBtnEl.style.display = tab === 'me' ? 'flex' : 'none';
+        // ===== 事件绑定 =====
+        tabBar.querySelectorAll('.moments-tab').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                tabBar.querySelectorAll('.moments-tab').forEach(function(b) {
+                    b.classList.remove('active');
+                    b.style.color = 'var(--text-secondary)';
+                    b.style.borderBottom = '2px solid transparent';
+                    b.style.fontWeight = '400';
                 });
+                this.classList.add('active');
+                this.style.color = 'var(--text-primary)';
+                this.style.borderBottom = '2px solid var(--accent-color)';
+                this.style.fontWeight = '600';
+                var tab = this.dataset.tab;
+                renderTab(tab, contentContainer);
+                var addBtnEl = document.getElementById('moments-add-btn');
+                if (addBtnEl) addBtnEl.style.display = tab === 'me' ? 'flex' : 'none';
             });
-
-            var initialAddBtn = document.getElementById('moments-add-btn');
-            if (initialAddBtn) initialAddBtn.style.display = 'flex';
-
-        } catch(e) {
-            alert('朋友圈加载失败: ' + e.message);
-            console.error('[朋友圈] 错误:', e);
-        }
+        });
     };
 
+    // =============================================
+    // 暴露到全局
+    // =============================================
     window.openMoments = window.openMoments;
     window.showAvatarSettings = showAvatarSettings;
     window.editMyInfo = editMyInfo;
     window.editMember = editMember;
     window.addMember = addMember;
     window.removeMember = removeMember;
-    window.partnerPublishPost = function(text, memberName) {
-        if (!text || !text.trim()) return;
-        var members = _getGroupMembers();
-        var member = null;
-        if (memberName) {
-            for (var i = 0; i < members.length; i++) {
-                if (members[i].name === memberName) {
-                    member = members[i];
-                    break;
-                }
-            }
-        }
-        if (!member && members.length > 0) {
-            member = members[Math.floor(Math.random() * members.length)];
-        }
-        if (!member) {
-            _notify('没有可用的群成员', 'warning');
-            return;
-        }
-        var post = _addPost('partner', text, new Date().toISOString(), member.name, member.avatar);
-        var container = document.getElementById('moments-content');
-        var activeTab = document.querySelector('.moments-tab.active');
-        if (container && activeTab) renderTab(activeTab.dataset.tab, container);
-        _notify('📱 ' + member.name + ' 发布了新动态', 'success', 2000);
-        return post;
-    };
-    window.forcePartnerPublish = function() {
-        _forceGeneratePartnerPosts();
-        _refreshUI();
-        _notify('已生成今日动态', 'success');
-    };
+    window.partnerPublishPost = partnerPublishPost;
 
-    console.log('[朋友圈] 模块已加载（完整修复版 + 每日2-3条动态生成）');
+    console.log('[朋友圈] 模块已加载（优化版 + 分页加载 + 性能提升）');
 })();
