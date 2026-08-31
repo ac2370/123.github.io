@@ -1,4 +1,4 @@
-// moments.js - 朋友圈功能（完整修复版 + 头像自动压缩）
+// moments.js - 朋友圈功能（完整修复版 + 头像自动压缩 + 每日动态生成）
 (function() {
     'use strict';
 
@@ -63,7 +63,7 @@
             }
         } catch(e) {}
         if (cards.length === 0) {
-            cards = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在'];
+            cards = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在', '一起加油', '你最好', '好想你', '真可爱', '今天天气真好', '想见你', '心动了'];
         }
         var result = [];
         for (var i = 0; i < cards.length; i++) {
@@ -75,11 +75,14 @@
         return result;
     }
 
-    function _generateRandomCombinedText() {
+    // 🔥 核心修复：生成动态文本 - 从字卡中随机抽取3-5个拼凑
+    function _generatePostText() {
         var cards = _getReplyCards();
-        if (cards.length < 2) {
+        if (cards.length === 0) {
             cards = ['早安', '晚安', '想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在'];
         }
+        
+        // 随机打乱
         var shuffled = cards.slice();
         for (var i = shuffled.length - 1; i > 0; i--) {
             var j = Math.floor(Math.random() * (i + 1));
@@ -87,12 +90,21 @@
             shuffled[i] = shuffled[j];
             shuffled[j] = temp;
         }
-        var count = 2 + Math.floor(Math.random() * 3);
+        
+        // 抽取 3-5 个字卡
+        var count = 3 + Math.floor(Math.random() * 3); // 3, 4, 5
         var picked = shuffled.slice(0, Math.min(count, shuffled.length));
-        var puncts = ['，', '。', '？', '！', '...', '～', '、', '；'];
+        
+        // 标点符号列表
+        var puncts = ['，', '；', '。', '？', '！'];
         var result = '';
         for (var pi = 0; pi < picked.length; pi++) {
             var p = puncts[Math.floor(Math.random() * puncts.length)];
+            // 最后一个字卡用句号或感叹号结尾
+            if (pi === picked.length - 1) {
+                var endPuncts = ['。', '！', '～'];
+                p = endPuncts[Math.floor(Math.random() * endPuncts.length)];
+            }
             result += picked[pi] + p;
         }
         return result;
@@ -370,7 +382,7 @@
             });
             if (availableMembers2.length === 0) return;
             var member2 = _randomPick(availableMembers2);
-            var text = _generateRandomCombinedText();
+            var text = _generatePostText();
             var comment = {
                 id: _generateId(),
                 author: 'partner',
@@ -399,7 +411,7 @@
             });
             if (availableMembers3.length === 0) return;
             var member3 = _randomPick(availableMembers3);
-            var replyText = _generateRandomCombinedText();
+            var replyText = _generatePostText();
             commentObj.reply = {
                 text: replyText,
                 timestamp: new Date().toISOString(),
@@ -419,7 +431,7 @@
     }
 
     // =============================================
-    // 🔥 修复：强制生成成员动态
+    // 🔥 核心修复：强制生成成员动态（每天2-3条）
     // =============================================
     function _forceGeneratePartnerPosts() {
         var data = _getData();
@@ -428,58 +440,93 @@
         
         // 如果没有成员，不生成
         if (members.length === 0) {
-            if (data.lastGenerateDate !== today) {
-                data.lastGenerateDate = today;
-                _setData(data);
-            }
+            console.log('[朋友圈] 没有群成员，跳过生成');
             return;
         }
 
         var activeMembers = members.filter(function(m) { return m.name && m.name.trim(); });
         if (activeMembers.length === 0) return;
 
-        // 🔥 修复：获取今天的日期字符串用于比较
-        var todayStr = new Date().toDateString();
-
-        // 🔥 修复：检查今天是否已经生成过动态
+        // 🔥 获取今天的 partner 帖子
         var todayPosts = data.posts.filter(function(p) {
             if (p.author !== 'partner') return false;
             var postDate = new Date(p.timestamp).toDateString();
-            return postDate === todayStr;
+            return postDate === today;
         });
 
-        // 🔥 修复：如果今天已经有足够多的动态（≥2条），跳过生成
-        if (todayPosts.length >= 2) {
-            console.log('[朋友圈] 今日已有 ' + todayPosts.length + ' 条动态，跳过生成');
+        // 🔥 如果今天已经有 2-3 条动态，不再生成
+        if (todayPosts.length >= 3) {
+            console.log('[朋友圈] 今日已有 ' + todayPosts.length + ' 条动态（已达上限），跳过生成');
             return;
         }
 
-        console.log('[朋友圈] 开始生成今日动态，已有 ' + todayPosts.length + ' 条');
+        // 🔥 如果今天已经有动态但少于3条，补充到3条
+        var existingCount = todayPosts.length;
+        var needed = 3 - existingCount; // 需要补充的数量
+        
+        // 🔥 确保至少生成2条，最多3条
+        var targetCount = 3;
+        if (existingCount === 0) {
+            targetCount = 2 + Math.floor(Math.random() * 2); // 2 或 3
+        } else {
+            targetCount = 3; // 补充到3条
+        }
+        
+        // 如果已有动态数 >= targetCount，不再生成
+        if (existingCount >= targetCount) {
+            console.log('[朋友圈] 今日已有 ' + existingCount + ' 条动态，目标 ' + targetCount + ' 条，跳过');
+            return;
+        }
 
-        // 🔥 修复：删除今天的所有 partner 帖子（重新生成）
-        data.posts = data.posts.filter(function(p) {
-            if (p.author !== 'partner') return true;
-            var postDate = new Date(p.timestamp).toDateString();
-            return postDate !== todayStr;
-        });
+        console.log('[朋友圈] 开始生成动态，已有 ' + existingCount + ' 条，目标 ' + targetCount + ' 条');
 
-        // 生成 2-4 条动态
-        var count = 2 + Math.floor(Math.random() * 3);
+        // 获取今天开始时间
         var now = new Date();
         var todayStart = new Date(now);
         todayStart.setHours(0, 0, 0, 0);
         
-        // 生成随机时间（早上8点到晚上10点之间）
-        var timeSlots = [];
-        for (var i = 0; i < count; i++) {
-            var slot = 8 + Math.random() * 14; // 8:00 ~ 22:00
-            timeSlots.push(slot);
+        // 获取已有帖子的时间，避免重复
+        var usedTimes = [];
+        for (var i = 0; i < todayPosts.length; i++) {
+            var t = new Date(todayPosts[i].timestamp);
+            usedTimes.push(t.getHours() * 60 + t.getMinutes());
         }
+
+        // 生成时间槽（早上8点到晚上10点之间）
+        var timeSlots = [];
+        var attempts = 0;
+        while (timeSlots.length < targetCount - existingCount && attempts < 50) {
+            attempts++;
+            var slot = 8 + Math.random() * 14; // 8:00 ~ 22:00
+            var minutes = Math.round(slot * 60);
+            // 检查是否与已有时间太接近（相差30分钟内）
+            var tooClose = false;
+            for (var ti = 0; ti < usedTimes.length; ti++) {
+                if (Math.abs(minutes - usedTimes[ti]) < 30) {
+                    tooClose = true;
+                    break;
+                }
+            }
+            if (!tooClose) {
+                timeSlots.push(slot);
+                usedTimes.push(minutes);
+            }
+        }
+
+        // 如果实在找不到足够的时间槽，就用随机时间
+        while (timeSlots.length < targetCount - existingCount) {
+            timeSlots.push(8 + Math.random() * 14);
+        }
+
+        // 排序时间槽
         timeSlots.sort(function(a, b) { return a - b; });
 
         for (var idx = 0; idx < timeSlots.length; idx++) {
+            // 🔥 随机选择一个成员
             var member = activeMembers[Math.floor(Math.random() * activeMembers.length)];
-            var text = _generateRandomCombinedText();
+            // 🔥 生成文本
+            var text = _generatePostText();
+            
             var hours = Math.floor(timeSlots[idx]);
             var minutes = Math.floor((timeSlots[idx] - hours) * 60);
             var ts = new Date(todayStart);
@@ -489,11 +536,12 @@
                 ts.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
             }
             _addPost('partner', text, ts.toISOString(), member.name, member.avatar);
+            console.log('[朋友圈] 生成动态: ' + member.name + ' - ' + text);
         }
 
-        data.lastGenerateDate = todayStr;
+        data.lastGenerateDate = today;
         _setData(data);
-        console.log('[朋友圈] 生成了 ' + count + ' 条今日动态');
+        console.log('[朋友圈] 生成了 ' + timeSlots.length + ' 条今日动态，总计 ' + (existingCount + timeSlots.length) + ' 条');
     }
 
     window.triggerPartnerInteraction = function(postId, type) {
@@ -714,7 +762,7 @@
     }
 
     // =============================================
-    // 编辑我的信息（带头像压缩功能）
+    // 编辑我的信息
     // =============================================
     function editMyInfo() {
         var old = document.getElementById('edit-my-modal');
@@ -883,7 +931,7 @@
     }
 
     // =============================================
-    // 编辑成员（带头像压缩）
+    // 编辑成员
     // =============================================
     function editMember(name) {
         var old = document.getElementById('edit-member-modal');
@@ -1024,7 +1072,7 @@
     }
 
     // =============================================
-    // 添加成员（带头像压缩）
+    // 添加成员
     // =============================================
     function addMember() {
         var old = document.getElementById('add-member-modal');
@@ -1657,5 +1705,5 @@
         _notify('已生成今日动态', 'success');
     };
 
-    console.log('[朋友圈] 模块已加载（完整修复版 + 头像压缩 + 动态生成修复）');
+    console.log('[朋友圈] 模块已加载（完整修复版 + 每日2-3条动态生成）');
 })();
