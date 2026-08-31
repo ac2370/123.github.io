@@ -1,4 +1,4 @@
-// moments.js - 朋友圈功能（修复版 + 自定义回复库联动）
+// moments.js - 朋友圈功能（与reply-library.js联动版）
 (function() {
     'use strict';
 
@@ -8,26 +8,55 @@
     var PAGE_SIZE = 10;
 
     // =============================================
-    // 🔥 从自定义回复库获取回复内容
+    // 🔥 从 reply-library.js 获取主字卡
     // =============================================
-    function _getCustomReplies() {
+    function _getMainReplies() {
         var cards = [];
         
-        // 1. 优先从 window.customReplies 读取（高级功能里的字卡）
-        if (window.customReplies && Array.isArray(window.customReplies) && window.customReplies.length > 0) {
+        // 1. 🔥 优先从 window.replyLibrary 读取（reply-library.js 暴露的）
+        if (window.replyLibrary && Array.isArray(window.replyLibrary) && window.replyLibrary.length > 0) {
+            cards = window.replyLibrary.map(function(item) {
+                // 支持字符串或对象格式
+                if (typeof item === 'string') return item;
+                if (item && item.text) return item.text;
+                if (item && item.label) return item.label;
+                return '';
+            }).filter(function(c) { return c && c.trim(); });
+        }
+        
+        // 2. 从 localStorage 读取 replyLibrary
+        if (cards.length === 0) {
+            try {
+                var stored = localStorage.getItem('replyLibrary');
+                if (stored) {
+                    var parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        cards = parsed.map(function(item) {
+                            if (typeof item === 'string') return item;
+                            if (item && item.text) return item.text;
+                            if (item && item.label) return item.label;
+                            return '';
+                        }).filter(function(c) { return c && c.trim(); });
+                    }
+                }
+            } catch(e) {}
+        }
+        
+        // 3. 从 window.customReplies 读取（兼容旧版）
+        if (cards.length === 0 && window.customReplies && Array.isArray(window.customReplies) && window.customReplies.length > 0) {
             cards = window.customReplies.map(function(c) {
                 return typeof c === 'string' ? c : (c.text || c.label || '');
             }).filter(function(c) { return c && c.trim(); });
         }
         
-        // 2. 从 localStorage 读取
+        // 4. 从 localStorage.customReplies 读取
         if (cards.length === 0) {
             try {
-                var stored = localStorage.getItem('customReplies');
-                if (stored) {
-                    var parsed = JSON.parse(stored);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        cards = parsed.map(function(c) {
+                var stored2 = localStorage.getItem('customReplies');
+                if (stored2) {
+                    var parsed2 = JSON.parse(stored2);
+                    if (Array.isArray(parsed2) && parsed2.length > 0) {
+                        cards = parsed2.map(function(c) {
                             return typeof c === 'string' ? c : (c.text || c.label || '');
                         }).filter(function(c) { return c && c.trim(); });
                     }
@@ -35,17 +64,17 @@
             } catch(e) {}
         }
         
-        // 3. 从 settings 读取
+        // 5. 从 settings.replies 读取
         if (cards.length === 0 && typeof settings !== 'undefined' && settings.replies && Array.isArray(settings.replies)) {
             cards = settings.replies.filter(function(c) { return c && c.trim(); });
         }
         
-        // 4. 如果还没有，尝试从页面元素读取
+        // 6. 尝试从页面元素读取
         if (cards.length === 0) {
             try {
-                var replyCardsEl = document.querySelector('#reply-cards-container .reply-card, .reply-cards .card');
+                var replyCardsEl = document.querySelector('#reply-cards-container .reply-card, .reply-cards .card, .reply-item');
                 if (replyCardsEl) {
-                    var els = document.querySelectorAll('.reply-card, .card-item, .reply-item');
+                    var els = document.querySelectorAll('.reply-card, .card-item, .reply-item, .card-text');
                     els.forEach(function(el) {
                         var text = el.textContent.trim();
                         if (text && text.length > 0 && text.length < 50) {
@@ -56,26 +85,9 @@
             } catch(e) {}
         }
         
-        // 5. 最终兜底 - 从已有的朋友圈数据中提取常用词
+        // 7. 最终兜底 - 使用一些常见的回复语
         if (cards.length === 0) {
-            var posts = _getPosts();
-            var wordMap = {};
-            for (var i = 0; i < posts.length; i++) {
-                var words = posts[i].text.split(/[，。！？、；\s,\.\!\?\s]+/);
-                for (var j = 0; j < words.length; j++) {
-                    var w = words[j].trim();
-                    if (w.length >= 2 && w.length <= 10) {
-                        wordMap[w] = (wordMap[w] || 0) + 1;
-                    }
-                }
-            }
-            var sorted = Object.keys(wordMap).sort(function(a, b) { return wordMap[b] - wordMap[a]; });
-            cards = sorted.slice(0, 20);
-        }
-        
-        // 6. 终极兜底
-        if (cards.length === 0) {
-            cards = ['想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在', '早安', '晚安'];
+            cards = ['想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在', '早安', '晚安', '加油', '真棒'];
         }
         
         // 去重
@@ -90,9 +102,40 @@
         return result;
     }
 
-    // 🔥 生成随机回复文本（从自定义回复库中抽取）
+    // 🔥 监听 reply-library.js 的更新事件
+    function _watchReplyLibraryUpdates() {
+        // 如果 reply-library.js 有更新事件，监听它
+        if (window.addEventListener) {
+            window.addEventListener('replyLibraryUpdated', function() {
+                console.log('[朋友圈] 检测到回复库更新，刷新数据');
+                // 刷新当前显示的动态
+                var container = document.getElementById('moments-content');
+                var activeTab = document.querySelector('.moments-tab.active');
+                if (container && activeTab) {
+                    renderTab(activeTab.dataset.tab, container);
+                }
+            });
+        }
+        
+        // 每隔30秒检查一次回复库是否变化（兜底）
+        var lastReplies = JSON.stringify(_getMainReplies());
+        setInterval(function() {
+            var currentReplies = JSON.stringify(_getMainReplies());
+            if (currentReplies !== lastReplies) {
+                lastReplies = currentReplies;
+                console.log('[朋友圈] 回复库已更新（定时检测）');
+                var container = document.getElementById('moments-content');
+                var activeTab = document.querySelector('.moments-tab.active');
+                if (container && activeTab) {
+                    renderTab(activeTab.dataset.tab, container);
+                }
+            }
+        }, 30000);
+    }
+
+    // 🔥 生成随机回复文本（从主字卡中抽取）
     function _generateReplyText() {
-        var cards = _getCustomReplies();
+        var cards = _getMainReplies();
         if (cards.length === 0) {
             return '嗯嗯';
         }
@@ -106,18 +149,24 @@
             shuffled[j] = temp;
         }
         var picked = shuffled.slice(0, count);
-        var puncts = ['，', '。', '？', '！', '...', '～'];
+        var puncts = ['，', '。', '？', '！', '...', '～', '😊', '❤️', '✨', '💕'];
         var result = '';
         for (var pi = 0; pi < picked.length; pi++) {
+            // 随机选择标点或表情
             var p = puncts[Math.floor(Math.random() * puncts.length)];
-            result += picked[pi] + p;
+            // 如果p是表情，不加标点直接拼接
+            if (p.match(/[😊❤️✨💕]/)) {
+                result += picked[pi] + p;
+            } else {
+                result += picked[pi] + p;
+            }
         }
         return result;
     }
 
-    // 🔥 生成动态文本（也使用自定义回复库）
+    // 🔥 生成动态文本（从主字卡中抽取）
     function _generatePartnerPostText() {
-        var cards = _getCustomReplies();
+        var cards = _getMainReplies();
         if (cards.length < 2) {
             cards = ['想你', '抱抱', '亲亲', '开心', '好梦', '今天超棒', '别担心', '有我在'];
         }
@@ -130,7 +179,7 @@
         }
         var count = 1 + Math.floor(Math.random() * Math.min(2, shuffled.length));
         var picked = shuffled.slice(0, count);
-        var puncts = ['，', '。', '？', '！', '...', '～'];
+        var puncts = ['，', '。', '？', '！', '...', '～', '😊', '❤️'];
         var result = '';
         for (var pi = 0; pi < picked.length; pi++) {
             var p = puncts[Math.floor(Math.random() * puncts.length)];
@@ -301,6 +350,8 @@
         duration = duration || 2000;
         if (typeof showNotification === 'function') {
             showNotification(msg, type, duration);
+        } else if (typeof window.showNotification === 'function') {
+            window.showNotification(msg, type, duration);
         } else {
             alert(msg);
         }
@@ -951,8 +1002,8 @@
                     (displayAvatar ? '<img src="' + _esc(displayAvatar) + '" style="width:100%;height:100%;object-fit:cover;">' : '<span style="font-size:16px;">🌸</span>') +
                     '</div>' +
                     '<span style="font-weight:500;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _esc(m.name) + '</span>' +
-                    '<button onclick="editMember(\'' + _esc(m.name) + '\')" style="padding:4px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--secondary-bg);color:var(--text-secondary);font-size:11px;cursor:pointer;">编辑</button>' +
-                    '<button onclick="removeMember(\'' + _esc(m.name) + '\')" style="padding:4px 8px;border:none;background:none;color:#ff6b6b;font-size:13px;cursor:pointer;">✕</button>' +
+                    '<button onclick="window.editMember(\'' + _esc(m.name) + '\')" style="padding:4px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--secondary-bg);color:var(--text-secondary);font-size:11px;cursor:pointer;">编辑</button>' +
+                    '<button onclick="window.removeMember(\'' + _esc(m.name) + '\')" style="padding:4px 8px;border:none;background:none;color:#ff6b6b;font-size:13px;cursor:pointer;">✕</button>' +
                     '</div>';
             }
         }
@@ -971,13 +1022,13 @@
                     '<div style="flex:1;min-width:0;">' +
                         '<div style="font-size:15px;font-weight:600;color:var(--text-primary);">' + _esc(myName) + '</div>' +
                     '</div>' +
-                    '<button onclick="editMyInfo()" style="padding:6px 14px;border:1px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-secondary);font-size:12px;cursor:pointer;">编辑</button>' +
+                    '<button onclick="window.editMyInfo()" style="padding:6px 14px;border:1px solid var(--border-color);border-radius:10px;background:var(--secondary-bg);color:var(--text-secondary);font-size:12px;cursor:pointer;">编辑</button>' +
                 '</div>' +
             '</div>' +
             '<div style="margin-bottom:12px;">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
                     '<span style="font-size:13px;font-weight:600;color:var(--text-primary);">👥 群成员</span>' +
-                    '<button onclick="addMember()" style="padding:5px 14px;border:none;border-radius:10px;background:var(--accent-color);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">+ 添加</button>' +
+                    '<button onclick="window.addMember()" style="padding:5px 14px;border:none;border-radius:10px;background:var(--accent-color);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">+ 添加</button>' +
                 '</div>' +
                 memberListHtml +
             '</div>' +
@@ -1426,18 +1477,17 @@
                     if (!freshPost) return;
                     var latestComment = freshPost.comments[freshPost.comments.length - 1];
                     if (latestComment && latestComment.author === 'me' && !latestComment.replied) {
-                        // 🔥 使用自定义回复库生成回复
+                        // 🔥 从主字卡中生成回复
                         var replyText = _generateReplyText();
                         if (replyText) {
                             _addReplyToComment(postId, latestComment.id, replyText);
-                            _notify('💬 ' + _getPartnerName() + ' 回复了你的评论', 'info', 3000);
+                            _notify('💬 ' + _getPartnerName() + ' 回复了你的评论: "' + replyText + '"', 'info', 3000);
                             var container2 = document.getElementById('moments-content');
                             var activeTab2 = document.querySelector('.moments-tab.active');
                             if (container2 && activeTab2) renderTab(activeTab2.dataset.tab, container2);
                         }
                     }
                 }, delay);
-                // 存储timeout以便清理
                 if (!post._replyTimeouts) post._replyTimeouts = [];
                 post._replyTimeouts.push(timeoutId);
             }
@@ -1513,11 +1563,14 @@
                 msg += '\n动态数量: ' + data.posts.length + ' 条';
             }
             
-            // 🔥 显示自定义回复库状态
-            var replies = _getCustomReplies();
-            msg += '\n\n📝 自定义回复库: ' + replies.length + ' 条';
+            // 🔥 显示主字卡库状态
+            var replies = _getMainReplies();
+            msg += '\n\n📝 主字卡库: ' + replies.length + ' 条';
             if (replies.length > 0) {
                 msg += '\n示例: ' + replies.slice(0, 5).join('、');
+            }
+            if (window.replyLibrary) {
+                msg += '\n来源: window.replyLibrary (' + window.replyLibrary.length + ' 条)';
             }
             
             alert(msg);
@@ -1526,10 +1579,14 @@
         }
     };
 
+    // 🔥 获取主字卡库（暴露给外部使用）
+    window.getMainReplies = _getMainReplies;
+
     // =============================================
     // 🔥 主界面
     // =============================================
     window.openMoments = function() {
+        // 检查存储空间
         if (!_checkStorageSpace()) {
             if (confirm('存储空间不足！是否清理旧数据（清理头像和封面）？')) {
                 window.cleanMomentsStorage();
@@ -1690,7 +1747,20 @@
                 if (addBtnEl) addBtnEl.style.display = tab === 'me' ? 'flex' : 'none';
             });
         });
+
+        // 🔥 显示当前使用的字卡数量
+        var replyCount = _getMainReplies().length;
+        if (replyCount > 0) {
+            var statusBar = document.createElement('div');
+            statusBar.style.cssText = 'position:absolute;bottom:70px;right:16px;font-size:10px;color:var(--text-secondary);opacity:0.5;background:rgba(0,0,0,0.3);padding:2px 10px;border-radius:10px;pointer-events:none;';
+            statusBar.textContent = '📚 ' + replyCount + '个字卡';
+            inner.style.position = 'relative';
+            inner.appendChild(statusBar);
+        }
     };
+
+    // 🔥 初始化 - 监听回复库更新
+    _watchReplyLibraryUpdates();
 
     // =============================================
     // 🔥 确保所有函数暴露到全局
@@ -1705,8 +1775,9 @@
     window.partnerPublishPost = window.partnerPublishPost;
     window.cleanMomentsStorage = window.cleanMomentsStorage;
     window.showMomentsStorageStatus = window.showMomentsStorageStatus;
-    window.getCustomReplies = _getCustomReplies;
+    window.getMainReplies = _getMainReplies;
 
-    console.log('[朋友圈] 模块已加载（修复版 + 自定义回复库联动）');
-    console.log('[朋友圈] 当前自定义回复库:', _getCustomReplies().slice(0, 10));
+    console.log('[朋友圈] 模块已加载（reply-library.js联动版）');
+    console.log('[朋友圈] 当前主字卡库:', _getMainReplies().slice(0, 10));
+    console.log('[朋友圈] 字卡总数:', _getMainReplies().length);
 })();
